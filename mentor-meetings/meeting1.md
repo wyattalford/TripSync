@@ -12,7 +12,7 @@
 | Time | Topic | Intended outcome |
 | --- | --- | --- |
 | 0–5 min | Introductions and working arrangements | Introduce each member and agree on weekly meeting and update expectations. |
-| 5–13 min | Project summary and bad situation | Check whether the missed opportunity below is a strong focus for the project. Also ask about Desire's other idea|
+| 5–13 min | Project summary and bad situation | Check whether the missed opportunity below is a strong focus for the project. Also ask about Desire's other idea regarding betting trivia app|
 | 13–23 min | Solution sketch and scope | Walk through availability → invitation → confirmed plan and identify the essential behavior. |
 | 23–33 min | Main issues and risks | Discuss adoption, privacy, stale availability, and evidence needed for problem framing. |
 | 33–40 min | Decisions and next steps | Record scope decisions, assign owners, and agree on the next week's work. |
@@ -21,7 +21,7 @@
 
 ### Domain and intended users
 
-OpenTime is for existing friend groups, who want to spend time together but often leave conversations at “we should hang out.” Their schedules change, and knowing someone has no scheduled commitment does not necessarily mean they want to make plans. Our focus is helping friends recognize a shared opportunity to meet and act on it while it is still available.
+OpenTime is for existing friend groups who want to spend time together but often leave conversations at “we should hang out.” Their schedules change, and knowing someone has no scheduled commitment does not necessarily mean they want to make plans. Our focus is helping friends recognize a shared opportunity to meet and act on it while it is still available.
 
 ### Bad situation
 
