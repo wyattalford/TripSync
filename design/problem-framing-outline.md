@@ -1,6 +1,6 @@
 # OpenTime: Problem Framing Outline
 
-**Due:** Thursday, November 12, at 11:59 PM Eastern  
+**Due:** Thursday, November 12, at 11:59 PM Eastern
 **Submission:** Markdown in the team repository, submitted through Commons using a commit URL.
 
 **Working focus:** Friends miss opportunities to meet even when they are willing and available, because they never discover the overlap and turn it into a confirmed plan.
@@ -51,7 +51,7 @@
 
 ## Group 3: Comparables and Workarounds
 
-**Name:** ____________________
+**Name:** J. Desire Abayo
 
 ### Existing Approaches
 

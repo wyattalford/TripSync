@@ -30,6 +30,8 @@ Hey, my name is Desire, and I’m a senior in course 6-3. I’m excited to work 
 
 **What are you looking forward to the most when building TripSync?**
 
+I'm really looking forward to working in a team environment after mostly doing solo projects. I'm also excited to get our product in front of real users, gather their feedback, and iterate, which will be important in the industry setting.
+
 ## Varun
 
 My name is Varun. I am a 6-3 Junior at MIT and am originally from Dallas, Texas. I am excited to build software together as a team.
