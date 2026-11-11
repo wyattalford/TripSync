@@ -29,3 +29,46 @@ Create a simple-to-use app that allows users to share times they are willing to 
 To avoid the problems of group chats and scheduling polls, users only create one set of availibility times, so that there is no need to manually reenter ones' times across different events and groups. Users can update their times at any point, and the app will reflect this change across all groups, finding new available times for the group to meet. 
 
 ### Ethical Analysis
+
+1. **Insight 1**
+  - **Observation**:
+    - **Dimension**: Stakeholders
+    - **Prompt**: For the plan initiator stakeholder role, note at least one concern specific to that role.
+    - **Feature**: Event invitation acceptance
+    - **Consequence**: A huge consequence is frequently having no-shows at planned events, which can be costly in the worst case.
+  - **Design Response**: Although it is impossible to predict if someone will show up to an event, the app could support a feature that will allow users to tag no-shows after every event for future reference. In addition, the plan initiator is always free to create a new group without the no-show.
+2. **Insight 2**
+  - **Observation**:
+    - **Dimension**: Stakeholders
+    - **Prompt**: For the invitee stakeholder role, note at least one concern specific to that role.
+    - **Feature**: Event invitation acceptance
+    - **Consequence**: A huge consequence is having a schedule change at the last minute that prevents the invitee from attending an event that has already been added to the group schedule.
+  - **Design Response**: Add a feature where invitees can cancel events in their schedule, notifying everyone in the group of this change.
+3. **Insight 3**
+  - **Observation**:
+    - **Dimension**: Time
+    - **Prompt**: Visualize one lifestyle change that could be supported by your technology.
+    - **Feature**: Adding open times
+    - **Consequence**: A consequence is being forced to create a more structured day. Since the times one enters are times they are willing to meet, users might have to think more about when they want alone time rather than it just being any time they are free. They must now anticipate for invites sent during those previous alone times. 
+  - **Design Response**: Allow users to tag times with various levels of willingness to meet rather than just a binary variable (will vs. won't meet).
+4. **Insight 4**
+  - **Observation**:
+    - **Dimension**: Time
+    - **Prompt**: Imagine five years out from now and consider how the system might influence friendships and family relationships.
+    - **Feature**: Event scheduling
+    - **Consequence**: A positive consequence is strengthening friend and family relationships, as our app encourages people to meet together and has a higher rate of success than the current methods.
+  - **Design Response**: To enforce group gatherings, we can add a new feature that recommends events for groups to do together. These recommendations should not crowd the screen as users should still be at the center of deciding what they want to do, but will rather appear as suggestions.
+5. **Insight 5**
+  - **Observation**:
+    - **Dimension**: Values
+    - **Prompt**: Deliberate on and then designate a couple primary values the system ideally would support.
+    - **Feature**: Many; event scheduling and adding open times
+    - **Consequence**: Consequences of these features in terms of the primary values include encouraging connection through group gatherings and privacy protection as one does not need to share every detail of their personal calendar.
+  - **Design Response**: To encourage attendance and connection at gatherings, the app will create a personal schedule for the user with events that have been accepted and confirmed. To further enforce privacy, instead of just hiding the events a user has in their calendar, we also hide one's available times so that they are only viewable to the user.
+6. **Insight 6**
+  - **Observation**:
+    - **Dimension**: Pervasiveness
+    - **Prompt**: Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
+    - **Feature** Group creation
+    - **Consequence**: With thousands of stakeholders, interactions may arise that are not just between in-person friend groups. For example, scheduling the best time to host a review session for a class. Manually adding everyone to a group is tedious.
+  - **Design Response**: Support a feature that creates an invitation link for groups to avoid unnecessary manual work. 
