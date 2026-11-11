@@ -21,3 +21,28 @@ The following scenarios illustrate the situations we aim to address.
 2. **Two friends want company, but neither knows an invitation would be welcome.** Eli finishes an assignment earlier than expected and has two hours before his next commitment. He would like to get dinner with a friend, but his last few invitations reached people who were busy. Rather than message several people again, he eats alone. Noah spends the same period looking for something to do but assumes Eli is still working. When they talk that night, they realize they both were free and would've loved to hang out. Neither had a specific plan to announce, and each person's willingness remained invisible to the other.
 
 3. **An empty calendar creates a misleading expectation of availability.** Walker shares his calendar with John to make arranging gatherings easier. John sees no events on Wednesday evening and suggests watching a movie. Walker had intended to use that time to study and rest, so he declines. John asks which other calendar gaps would work, leaving Walker to explain the purpose of his unscheduled time. After several similar exchanges, Walker stops sharing his calendar. Walker now feels that declining an invitation requires defending how he spends his unscheduled time. Sharing his calendar has made his schedule more visible without making it easier to communicate when he actually wants to hang out with friends.
+
+## Comparables and Workarounds
+
+### Existing Approaches
+
+- **Group chats (WhatsApp, iMessage, Messenger):** These are the most common ways friends organize hangouts since most people use them. They're convenient for suggesting activities and discussing plans. However, messages get buried, people respond at different times, and someone usually has to follow up to confirm everyone's availability. This becomes repetitive when friends want to hang out regularly.
+
+- **Scheduling polls (When2meet, Doodle):** These tools are great for finding a time that works for everyone. Each person enters their availability, and the tool shows overlapping times. The limitation is that someone typically needs to create a poll for a specific event and share it with everyone. This works for planned activities but is less convenient for spontaneous hangouts when nobody has suggested anything yet.
+
+- **Shared calendars (Google Calendar, Apple Calendar):** These help people organize their schedules and share availability. However, an empty calendar doesn't necessarily mean someone wants to hang out. There's also a privacy concern since people may not want their friends seeing personal appointments. So, users must keep their calendars updated and manage sharing permissions.
+
+- **Social planning apps (Howbout):** Howbout is probably our closest competitor. It already allows friends to share availability, sync calendars, create plans, and find overlapping free time. This addresses much of the problem OpenTime targets. However, users still need to adopt the app and maintain their availability. OpenTime will differentiate itself by focusing on times when people are actually interested in hanging out, rather than simply being free.
+
+### Remaining Opportunity
+
+- **Verifying our pitch's claims:** Our claims about group chats, scheduling polls, and shared calendars generally hold up. Group chats require repeated coordination, scheduling polls usually start with a particular event, and shared calendars don't necessarily indicate willingness to socialize. However, Howbout already offers several features similar to OpenTime, so we can't claim that no existing solution addresses this problem.
+
+- **What opportunity remains for OpenTime?** The main opportunity is making spontaneous hangouts easier without requiring someone to initiate a plan first. For example, instead of messaging five friends asking who's free Friday night, I could open OpenTime and immediately see who's interested in hanging out. We could focus on three simple features: sharing times you're open to plans, seeing when friends' availability overlaps, and turning those openings into actual activities. The challenge would be making this simpler than existing apps like Howbout and ensuring people regularly update their availability.
+
+### Sources
+
+- [Doodle - Group Polls](https://doodle.com/en/product/polls) - How scheduling polls work.
+- [When2meet](https://www.when2meet.com) - Finding overlapping availability.
+- [Google Calendar - Calendar Sharing](https://support.google.com/calendar/answer/37082) - Shared availability and finding free time.
+- [Howbout — App Store](https://apps.apple.com/us/app/howbout-shared-calendar/id1477248221) - Social planning and calendar features.
