@@ -1,18 +1,18 @@
-## Problem Statement
+# Problem Statement
 
-### Domain
+## Domain
 
 The domain is informal social planning among people who already know each other. Friends often want to get dinner, watch a movie, or spend an evening together between classes, work, and other commitments. One person may suggest an activity in a group chat or ask a few friends whether they are around. The group then needs to find a suitable time, decide who is joining, and establish whether the gathering is actually happening.
 
 The primary stakeholders are friends who want to spend time together without making every small gathering require extensive planning. They want opportunities to see each other while retaining flexibility and control over their personal time. Free time, willingness to socialize, and commitment to a particular gathering are separate things. Friends may spend an evening apart because each assumes the others are unavailable, even when everyone would welcome an invitation. Sharing a calendar can expose more of someone's schedule while still leaving that willingness unclear.
 
-### Stakeholders
+## Stakeholders
 
 - **Person initiating a plan:** Suggests a gathering and wants to find interested friends without repeatedly asking each person when they are available.
 - **Invited friend(s):** Decide whether to join and need to understand the proposed time and activity before committing.
 - **Friends outside the planning channel:** May be left out when invitations circulate through a particular app or group chat they do not use.
 
-### Bad Situations
+## Bad Situations
 
 The following scenarios illustrate the situations we aim to address.
 
@@ -47,13 +47,13 @@ The following scenarios illustrate the situations we aim to address.
 - [Google Calendar - Calendar Sharing](https://support.google.com/calendar/answer/37082) - Shared availability and finding free time.
 - [Howbout — App Store](https://apps.apple.com/us/app/howbout-shared-calendar/id1477248221) - Social planning and calendar features.
 
-### Solution Sketch
+## Solution Sketch
 
 Create a simple-to-use app that allows users to share times they are willing to meet with their group and plan out gatherings accordingly. This is different than times when one is simply available, as an open time slot does not necessarily imply willingness and a commitment to gather. Users can create and be part of several different groups depending on who they want to hang out with. After everyone in the party shares their availibilities, anyone is free to send out invitations for an event they have in mind. Users can accept/decline invitations, and the users have the final say on whether to officially add the event to their schedule after a group discussion.
 
 To avoid the problems of group chats and scheduling polls, users only create one set of availibility times, so that there is no need to manually reenter ones' times across different events and groups. Users can update their times at any point, and the app will reflect this change across all groups, finding new available times for the group to meet. 
 
-### Ethical Analysis
+## Ethical Analysis
 
 1. **Insight 1**
   - **Observation**:
