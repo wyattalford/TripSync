@@ -78,16 +78,6 @@ These are proposals to review with Eagon, not commitments already agreed at the 
 | Determine when to meet each week and where as well as who will write each mentor meeting plan        | Meeting schedule                                             | Nov. 11 | Assign at meeting |
 
 
-
-
-### Decisions made — complete after the meeting
-
-- **Agreed problem and initial scope:** To be recorded. 
-- **Design decisions and reasons:** To be recorded.
-- **Mentor feedback and unresolved questions:** To be recorded.
-- **Confirmed tasks, owners, and deadlines:** Update the table above after discussion.
-- **Next mentor meeting and update arrangements:** To be recorded.
-
 ## Notes:
 Concerns/Draw Concepts from here:
 
