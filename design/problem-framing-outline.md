@@ -79,7 +79,7 @@ For each selected alternative, explain:
 
 ## Group 4: Solution Sketch and Ethical Analysis
 
-**Name:** ____________________
+**Name:** Anthony Zheng
 
 ### Solution Sketch
 
