@@ -9,15 +9,21 @@
 
 **Goal:** Get feedback on whether our bad situation is specific and compelling, agree on a manageable first version, and establish how we will work with our mentor.
 
-| Time | Topic | Intended outcome |
-| --- | --- | --- |
-| 0–5 min | Introductions and working arrangements | Introduce each member and agree on weekly meeting and update expectations. |
-| 5–13 min | Project summary and bad situation | Check whether the missed opportunity below is a strong focus for the project. Also ask about Desire's other idea regarding betting trivia app|
-| 13–23 min | Solution sketch and scope | Walk through availability → invitation → confirmed plan and identify the essential behavior. |
-| 23–33 min | Main issues and risks | Discuss adoption, privacy, stale availability, and evidence needed for problem framing. |
-| 33–40 min | Decisions and next steps | Record scope decisions, assign owners, and agree on the next week's work. |
+
+| Time      | Topic                                  | Intended outcome                                                                                                                              |
+| --------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0–5 min   | Introductions and working arrangements | Introduce each member and agree on weekly meeting and update expectations.                                                                    |
+| 5–13 min  | Project summary and bad situation      | Check whether the missed opportunity below is a strong focus for the project. Also ask about Desire's other idea regarding betting trivia app |
+| 13–23 min | Solution sketch and scope              | Walk through availability → invitation → confirmed plan and identify the essential behavior.                                                  |
+| 23–33 min | Main issues and risks                  | Discuss adoption, privacy, stale availability, and evidence needed for problem framing.                                                       |
+| 33–40 min | Decisions and next steps               | Record scope decisions, assign owners, and agree on the next week's work.                                                                     |
+
+
+
 
 ## Project summary
+
+
 
 ### Domain and intended users
 
@@ -49,31 +55,65 @@ Group chats remain useful for conversation, but a vague invitation can stall wit
 ## Issues to discuss
 
 1. **Is the problem narrow and compelling enough?** We want to focus on missed opportunities among friends who already want to meet. We would like feedback on whether the Friday scenario gives us a clear target and what evidence would distinguish this problem from a general lack of motivation to make plans.
-
 2. **Will friends maintain their availability?** The app only helps if enough members share useful windows. We need to test whether entering and updating those windows takes less effort than the coordination it replaces, and decide how to handle outdated windows.
-
 3. **How should privacy and social pressure work?** Sharing free time could make people feel obligated to accept invitations or explain a refusal. We need to decide who can see each window and make it clear that being open does not promise attendance.
-
 4. **What makes a plan confirmed?** An overlap does not establish agreement about the activity, location, or participants. We need clear rules for accepting, declining, changing, and canceling a proposal so users can tell what they have committed to.
-
 5. **What belongs in the first implementation?** We propose starting with manually entered windows so the main flow can be tested without calendar integration. We would like advice on the smallest useful scope and how to separate availability, invitations, and commitments into concepts using the required sync engine.
 
+
+
 ## Plans & decisions
+
+
 
 ### Proposed work for the next week
 
 These are proposals to review with Eagon, not commitments already agreed at the meeting.
 
-| Proposed task | Expected result | Target | Owner |
-| --- | --- | --- | --- |
-| Finish the problem framing and the ethical analysis based on where we stand at meeting time. | Focused F2 document with corroboration and ethical analysis. | Nov. 12 | Assign at meeting |
+
+| Proposed task                                                                                        | Expected result                                              | Target  | Owner             |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------- | ----------------- |
+| Finish the problem framing and the ethical analysis based on where we stand at meeting time.         | Focused F2 document with corroboration and ethical analysis. | Nov. 12 | Assign at meeting |
 | Define the essential concepts and walk through an invitation from shared availability to commitment. | F3 concept designs, syncs, and incremental development plan. | Nov. 16 | Assign at meeting |
-| Determine when to meet each week and where as well as who will write each mentor meeting plan | Meeting schedule | Nov. 11 | Assign at meeting |
+| Determine when to meet each week and where as well as who will write each mentor meeting plan        | Meeting schedule                                             | Nov. 11 | Assign at meeting |
+
+
+
 
 ### Decisions made — complete after the meeting
 
-- **Agreed problem and initial scope:** To be recorded.
+- **Agreed problem and initial scope:** To be recorded. 
 - **Design decisions and reasons:** To be recorded.
 - **Mentor feedback and unresolved questions:** To be recorded.
 - **Confirmed tasks, owners, and deadlines:** Update the table above after discussion.
 - **Next mentor meeting and update arrangements:** To be recorded.
+
+## Notes:
+Concerns/Draw Concepts from here:
+
+- show the idea that really distinguishes us from when2meet and shared calendars
+  - why we are really different
+- what if you have a group member whose constraints change ie dynamic needs
+  - whiteboard ie 1 source of truth for scheduling
+  - map it out clearly how each of the competitors have their own bad situation that ours fixes
+    - calendly, when2meet, etc
+    - shared calendar
+      - not all free time is time you want to hang out - ie too revealing of calendar
+    - When2Meet
+      - if someone's time preferences change then you need to send out a new when2meet
+      - One event and you have to create it every new time
+        - ie want to hang out every weekend each time you have to create a new when2meet every time
+    - Calendly
+      - intent
+      - No input for this particular purpose
+      - One calendar and just open times
+        - solution is open calendar with a purpose, so you can block times for specific things
+      - Social commitment of actually going when someone books time through social expectation
+        - idea of booking and guarenteeing time with someone
+        - why sign up for opentime
+          - when opentime says you should hang out at this time you have to/should go
+            - this makes it worth the one time fee of signing up and signing in each day
+
+When to meet:
+    Lecture time on Wednesday
+
