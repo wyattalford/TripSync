@@ -22,6 +22,62 @@ The following scenarios illustrate the situations we aim to address.
 
 3. **An empty calendar creates a misleading expectation of availability.** Walker shares his calendar with John to make arranging gatherings easier. John sees no events on Wednesday evening and suggests watching a movie. Walker had intended to use that time to study and rest, so he declines. John asks which other calendar gaps would work, leaving Walker to explain the purpose of his unscheduled time. After several similar exchanges, Walker stops sharing his calendar. Walker now feels that declining an invitation requires defending how he spends his unscheduled time. Sharing his calendar has made his schedule more visible without making it easier to communicate when he actually wants to hang out with friends.
 
+## Corroboration
+
+### Evidence Supporting the Problem
+
+The central problem behind OpenTime is that opportunities to meet can go undiscovered because arranging even a casual gathering requires someone to initiate coordination, and find out other's open times to hang out. Research on social interactions supports the idea that people sometimes fail to connect despite mutual interest, while existing scheduling workflows illustrate the effort required to identify overlapping availability.
+
+### Repeated Coordination Can Prevent Opportunities from Being Discovered
+
+When2meet demonstrates how scheduling typically begins with a specific proposed event. Someone creates a poll, shares it with the group, and asks participants to enter their availability. Although this works well for finding a mutually available time, a new gathering generally requires repeating that process with more initiation.
+
+When2meet's workflow establishes that coordination is required and sought after, but does not establish how often that effort actually discourages gatherings. This remains an important distinction for OpenTime's solution. Nevertheless, people's use of When2meet corroborates the problem.
+
+### People Can Underestimate Others' Willingness to Socialize
+
+Givi et al. (2026), in *Self-Invitation Hesitation: How and Why People Fail to Ask to Join the Plans of Others*, investigated why people hesitate to ask to join existing social plans. Across eight studies they found that people underestimated how receptive organizers would be. Potential participants often assumed their request would be unwelcome, even when organizers would have welcomed their participation.
+
+This supports the underlying problem in the second bad situation, where Eli and Noah both want company but neither reaches out. It suggests that missed social opportunities may result from incorrect assumptions about other people's interest rather than an actual lack of willingness to socialize.
+
+This shows people seek a mechanism to hangout and feel more welcomed, which could be solved by the implied social contract OpenTime can provide. 
+
+### Interest Does Not Always Become a Confirmed Plan
+
+Givi et al. (2025), in *Maybe Don't Say "Maybe": How and Why Invitees Fail to Realize That They Should Not Respond to Invitations With a "Maybe"*, examined how organizers and invitees interpret tentative responses. Across six experiments, invitees overestimated how much organizers would prefer a "maybe" over a direct "no" and underestimated how negatively organizers could interpret ambiguity.
+
+This helps explain the first bad situation, where the friends express interest in watching Star Wars but never establish a definite plan. Uncertainty about others' commitments can create additional follow-up work, even after a gathering has been suggested.
+
+The research demonstrates that people interpret ambiguous invitations differently and people seek definitive plans.
+
+### Free Time Does Not Necessarily Mean Willingness to Meet
+
+One situation I've encountered with friends is that having nothing scheduled doesn't always mean someone wants to hang out. For example, a friend might ask whether I'm free in the evening, and even though I don't have any specific commitments, I might have planned to spend that time studying or relaxing alone. Saying I'm free can create the expectation that I'm willing to make plans, while saying I'm busy doesn't accurately describe the situation either.
+
+This illustrates a limitation of using calendar availability to coordinate casual gatherings. Knowing that someone has free time doesn't necessarily tell you whether they want to socialize, which can lead to misunderstandings or unnecessary back-and-forth when arranging plans. This is a personal anecdote so it is more limited than the studies as evidence, but we have heard others have similar opinions. 
+
+### Limitations
+
+Although the studies support several mechanisms behind missed social opportunities, none directly measures how frequently friends have overlapping availability and willingness but fail to meet because coordination never begins. However, the evidence provided, along with the avid use of scheduling and calendar tools today shows promise and motivation for this service. 
+
+### Prevalence and Consequences
+
+The consequences suggested by our bad situations include missed gatherings, repeated follow-up messages, and frustration when plans remain uncertain. While each individual incident may be relatively minor, recurring failures could meaningfully reduce opportunities for friends to spend time together.
+
+The most useful additional evidence would be concrete accounts of recent missed gatherings. In particular, we would want to establish whether friends later discovered that they had overlapping availability, how they learned this, what prevented them from coordinating, and whether similar failures happen repeatedly.
+
+We would also investigate groups whose existing planning methods work well. Understanding when group chats or scheduling polls are sufficient would help establish in what scenarios OpenTime would be helpful.
+
+### References
+
+1. **When2meet.** Official scheduling tool. https://www.when2meet.com/
+
+2. **Givi, J., Grossman, D. M., Kirk, C. P., & Sedikides, C. (2026).** *Self-Invitation Hesitation: How and Why People Fail to Ask to Join the Plans of Others.* Personality and Social Psychology Bulletin, 52(6), 1613–1626. https://doi.org/10.1177/01461672251324232
+
+3. **Givi, J., Kirk, C. P., Grossman, D. M., & Sedikides, C. (2025).** *Maybe Don't Say "Maybe": How and Why Invitees Fail to Realize That They Should Not Respond to Invitations With a "Maybe".* Journal of Experimental Social Psychology, 121, 104814. https://doi.org/10.1016/j.jesp.2025.104814
+
+4. **Google.** *Share Your Calendar.* Google Calendar Help. https://support.google.com/calendar/answer/37082
+
 ## Comparables and Workarounds
 
 ### Existing Approaches
