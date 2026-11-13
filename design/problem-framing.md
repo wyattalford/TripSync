@@ -1,4 +1,4 @@
-# Problem Statement
+# Problem Framing
 
 ## Domain
 
