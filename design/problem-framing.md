@@ -9,7 +9,7 @@ The primary stakeholders are friends who want to spend time together without mak
 ## Stakeholders
 
 - **Person initiating a plan:** Suggests a gathering and wants to find interested friends without repeatedly asking each person when they are available.
-- **Invited friend(s):** Decide whether to join and need to understand the proposed time and activity before committing.
+- **Potential participant:** Decide whether to join and need to understand the proposed time and activity before committing.
 - **Friends outside the planning channel:** May be left out when invitations circulate through a particular app or group chat they do not use.
 
 ## Bad Situations
@@ -26,47 +26,32 @@ The following scenarios illustrate the situations we aim to address.
 
 ### Evidence Supporting the Problem
 
-The central problem behind OpenTime is that opportunities to meet can go undiscovered because arranging even a casual gathering requires someone to initiate coordination, and find out other's open times to hang out. Research on social interactions supports the idea that people sometimes fail to connect despite mutual interest, while existing scheduling workflows illustrate the effort required to identify overlapping availability.
+The central problem behind OpenTime is that opportunities to meet can go undiscovered because arranging even a casual gathering requires someone to initiate a plan and determine when others would welcome an invitation. Research on social interactions supports the idea that people sometimes fail to connect despite mutual interest, while existing scheduling workflows illustrate the effort required to identify overlapping availability.
+
+### Personal Experience
+
+I experienced this while trying to arrange a Star Wars viewing with friends. Everyone said they wanted to join, but nobody proposed a specific time or place. The day passed without us meeting, even though we could have spent that time together. Our shared interest never became a definite plan. This experience illustrates the first bad situation: friends can want to meet and have a workable opportunity, yet miss it because the conversation never reaches a concrete agreement. It is one personal account and does not establish how frequently this happens, but it provides a direct example of the problem we aim to address.
 
 ### Repeated Coordination Can Prevent Opportunities from Being Discovered
 
-When2meet demonstrates how scheduling typically begins with a specific proposed event. Someone creates a poll, shares it with the group, and asks participants to enter their availability. Although this works well for finding a mutually available time, a new gathering generally requires repeating that process with more initiation.
-
-When2meet's workflow establishes that coordination is required and sought after, but does not establish how often that effort actually discourages gatherings. This remains an important distinction for OpenTime's solution. Nevertheless, people's use of When2meet corroborates the problem.
+When2meet demonstrates how scheduling typically begins with a specific proposed event. Someone creates a poll, shares it with the group, and asks participants to enter their availability. Although this works well for finding a mutually available time, a new gathering generally requires repeating that process with more initiation. When2meet's workflow establishes that coordination is required and sought after, but does not establish how often that extra effort actually discourages gatherings especially in a casual setting. This remains an important distinction for OpenTime's solution. Nevertheless, people's use of When2meet corroborates the problem.
 
 ### People Can Underestimate Others' Willingness to Socialize
 
-Givi et al. (2026), in *Self-Invitation Hesitation: How and Why People Fail to Ask to Join the Plans of Others*, investigated why people hesitate to ask to join existing social plans. Across eight studies they found that people underestimated how receptive organizers would be. Potential participants often assumed their request would be unwelcome, even when organizers would have welcomed their participation.
-
-This supports the underlying problem in the second bad situation, where Eli and Noah both want company but neither reaches out. It suggests that missed social opportunities may result from incorrect assumptions about other people's interest rather than an actual lack of willingness to socialize.
-
-This shows people seek a mechanism to hangout and feel more welcomed, which could be solved by the implied social contract OpenTime can provide. 
+Givi et al. (2026), in *Self-Invitation Hesitation: How and Why People Fail to Ask to Join the Plans of Others*, investigated why people hesitate to ask to join existing social plans. Across eight studies they found that people underestimated how receptive organizers would be. Potential participants often assumed their request would be unwelcome, even when organizers would have welcomed their participation. The study concerns joining existing plans, whereas our second scenario concerns initiating contact before a plan exists. Still, the study supports a related mechanism that people can underestimate whether their company would be welcome. It does not establish how often friends miss overlapping openings or whether OpenTime would change that behavior.
 
 ### Interest Does Not Always Become a Confirmed Plan
 
-Givi et al. (2025), in *Maybe Don't Say "Maybe": How and Why Invitees Fail to Realize That They Should Not Respond to Invitations With a "Maybe"*, examined how organizers and invitees interpret tentative responses. Across six experiments, invitees overestimated how much organizers would prefer a "maybe" over a direct "no" and underestimated how negatively organizers could interpret ambiguity.
-
-This helps explain the first bad situation, where the friends express interest in watching Star Wars but never establish a definite plan. Uncertainty about others' commitments can create additional follow-up work, even after a gathering has been suggested.
-
-The research demonstrates that people interpret ambiguous invitations differently and people seek definitive plans.
+Givi et al. (2025), in *Maybe Don't Say "Maybe": How and Why Invitees Fail to Realize That They Should Not Respond to Invitations With a "Maybe"*, examined how organizers and invitees interpret tentative responses. Across six experiments, invitees overestimated how much organizers would prefer a "maybe" over a direct "no" and underestimated how negatively organizers could interpret ambiguity. This helps explain the first bad situation, where the friends express interest in watching Star Wars but never establish a definite plan. Uncertainty about others' commitments can create additional follow-up work, even after a gathering has been suggested. The research demonstrates that people interpret ambiguous invitations differently and people seek definitive plans.
 
 ### Free Time Does Not Necessarily Mean Willingness to Meet
 
-One situation I've encountered with friends is that having nothing scheduled doesn't always mean someone wants to hang out. For example, a friend might ask whether I'm free in the evening, and even though I don't have any specific commitments, I might have planned to spend that time studying or relaxing alone. Saying I'm free can create the expectation that I'm willing to make plans, while saying I'm busy doesn't accurately describe the situation either.
-
-This illustrates a limitation of using calendar availability to coordinate casual gatherings. Knowing that someone has free time doesn't necessarily tell you whether they want to socialize, which can lead to misunderstandings or unnecessary back-and-forth when arranging plans. This is a personal anecdote so it is more limited than the studies as evidence, but we have heard others have similar opinions. 
+One situation I've encountered with friends is that having nothing scheduled doesn't always mean someone wants to hang out. For example, a friend might ask whether I'm free in the evening, and even though I don't have any specific commitments, I might have planned to spend that time studying or relaxing alone. Saying I'm free can create the expectation that I'm willing to make plans, while saying I'm busy doesn't accurately describe the situation either. This illustrates a limitation of using calendar availability to coordinate casual gatherings. Knowing that someone has free time doesn't necessarily tell you whether they want to socialize, which can lead to misunderstandings or unnecessary back-and-forth when arranging plans. This is a personal anecdote so it is more limited than the studies as evidence.
 
 ### Limitations
+The Star Wars experience provides a concrete example of friends missing a gathering despite shared interest and a workable opportunity to meet. The immediate cost was an evening we could have spent together. Our other scenarios identify related costs, including repeated follow-up messages, uncertainty about whether plans are happening, and pressure to explain how personal time is spent.
 
-Although the studies support several mechanisms behind missed social opportunities, none directly measures how frequently friends have overlapping availability and willingness but fail to meet because coordination never begins. However, the evidence provided, along with the avid use of scheduling and calendar tools today shows promise and motivation for this service. 
-
-### Prevalence and Consequences
-
-The consequences suggested by our bad situations include missed gatherings, repeated follow-up messages, and frustration when plans remain uncertain. While each individual incident may be relatively minor, recurring failures could meaningfully reduce opportunities for friends to spend time together.
-
-The most useful additional evidence would be concrete accounts of recent missed gatherings. In particular, we would want to establish whether friends later discovered that they had overlapping availability, how they learned this, what prevented them from coordinating, and whether similar failures happen repeatedly.
-
-We would also investigate groups whose existing planning methods work well. Understanding when group chats or scheduling polls are sufficient would help establish in what scenarios OpenTime would be helpful.
+This account and the research above support the plausibility of these problems, but they do not establish how frequently they occur. Repeated failures could reduce opportunities to maintain friendships, although our current evidence cannot determine the extent of that effect. OpenTime's potential value therefore depends on whether it can help friends turn shared willingness into confirmed plans with less effort than their existing methods. Groups whose chats or scheduling polls already work well may have little reason to adopt another tool.
 
 ### References
 
@@ -82,32 +67,38 @@ We would also investigate groups whose existing planning methods work well. Unde
 
 ### Existing Approaches
 
-- **Group chats (WhatsApp, iMessage, Messenger):** These are the most common ways friends organize hangouts since most people use them. They're convenient for suggesting activities and discussing plans. However, messages get buried, people respond at different times, and someone usually has to follow up to confirm everyone's availability. This becomes repetitive when friends want to hang out regularly.
+- **Group chats (WhatsApp, iMessage, Messenger):** Friends already use these channels to suggest activities and discuss plans, so they introduce little additional effort. However, availability and later changes can become scattered across messages. Someone must reconstruct the group's current preferences and follow up before a tentative idea becomes a confirmed gathering. OpenTime would give the group a shared record of current openings and accepted plans.
 
-- **Scheduling polls (When2meet, Doodle):** These tools are great for finding a time that works for everyone. Each person enters their availability, and the tool shows overlapping times. The limitation is that someone typically needs to create a poll for a specific event and share it with everyone. This works for planned activities but is less convenient for spontaneous hangouts when nobody has suggested anything yet.
+- **Scheduling polls (When2meet, Doodle):** These tools collect availability and reveal overlapping times. When2meet participants can update their responses, and its days-of-the-week mode can represent recurring availability. However, responses remain associated with a particular poll. OpenTime would explore maintaining reusable, purpose-specific willingness across possible gatherings and groups, with changes reflected in the relevant overlaps. The proposed benefit is reducing repeated collection of similar information while keeping invitations and commitments distinct.
 
-- **Shared calendars (Google Calendar, Apple Calendar):** These help people organize their schedules and share availability. However, an empty calendar doesn't necessarily mean someone wants to hang out. There's also a privacy concern since people may not want their friends seeing personal appointments. So, users must keep their calendars updated and manage sharing permissions.
+- **Shared calendars (Google Calendar, Apple Calendar):** These make schedules visible, and Google Calendar can share free/busy information without revealing appointment details. However, a calendar gap still leaves uncertainty about whether someone would welcome an invitation. Our third bad situation illustrates this distinction: Walker's calendar exposes unscheduled time without communicating his intention to study or rest. OpenTime would use deliberately selected openings to identify shared willingness while keeping unrelated personal time and events private.
 
-- **Social planning apps (Howbout):** Howbout is probably our closest competitor. It already allows friends to share availability, sync calendars, create plans, and find overlapping free time. This addresses much of the problem OpenTime targets. However, users still need to adopt the app and maintain their availability. OpenTime will differentiate itself by focusing on times when people are actually interested in hanging out, rather than simply being free.
+- **Booking tools (Calendly):** Calendly supports reusable event types, custom availability, and meeting polls, so it already addresses purpose and scheduling effort. Its booking workflows help people arrange a particular kind of meeting typically in a more structured and professional context. OpenTime would focus on an existing friend group discovering shared willingness before someone proposes a specific gathering, followed by explicit acceptance. Its value would depend on making that process easier for casual social plans than configuring an existing booking tool.
+
+- **Social planning apps (Howbout):** Howbout is our closest comparable because it already supports sharing calendars, finding availability, and arranging plans. Its documentation describes availability derived from synced calendars and privacy settings. OpenTime's proposed emphasis is a reusable record of when particular invitations would be welcome, combined with current group overlaps and explicit commitments. Adoption and maintenance are challenges for both apps, so our advantage would need to come from a clearer or less burdensome workflow.
 
 ### Remaining Opportunity
 
-- **Verifying our pitch's claims:** Our claims about group chats, scheduling polls, and shared calendars generally hold up. Group chats require repeated coordination, scheduling polls usually start with a particular event, and shared calendars don't necessarily indicate willingness to socialize. However, Howbout already offers several features similar to OpenTime, so we can't claim that no existing solution addresses this problem.
-
-- **What opportunity remains for OpenTime?** The main opportunity is making spontaneous hangouts easier without requiring someone to initiate a plan first. For example, instead of messaging five friends asking who's free Friday night, I could open OpenTime and immediately see who's interested in hanging out. We could focus on three simple features: sharing times you're open to plans, seeing when friends' availability overlaps, and turning those openings into actual activities. The challenge would be making this simpler than existing apps like Howbout and ensuring people regularly update their availability.
+The remaining opportunity is helping friends maintain a shared understanding of when invitations would be welcome and turn that information into a concrete agreement. In the Star Wars experience, everyone expressed interest, but the conversation never established when or where the gathering would happen. A useful solution must carry that shared interest through to a decision while accommodating changing preferences. OpenTime would combine selected openings, updates reflected across relevant groups, and explicit acceptance of proposed gatherings. Existing tools already provide many individual parts of this process. The opportunity lies in making the combined workflow simple enough that friends gain more from discovering and confirming gatherings than they spend maintaining their information. Whether this offers a meaningful improvement over Howbout remains an important question to test.
 
 ### Sources
 
-- [Doodle - Group Polls](https://doodle.com/en/product/polls) - How scheduling polls work.
-- [When2meet](https://www.when2meet.com) - Finding overlapping availability.
-- [Google Calendar - Calendar Sharing](https://support.google.com/calendar/answer/37082) - Shared availability and finding free time.
-- [Howbout — App Store](https://apps.apple.com/us/app/howbout-shared-calendar/id1477248221) - Social planning and calendar features.
+- [Doodle — Group Polls](https://doodle.com/en/product/polls) — Collecting availability and selecting a meeting time.
+- [When2meet](https://www.when2meet.com/) — Availability polls for specific dates or days of the week.
+- [CodeDay — When2meet Guide](https://docs.codeday.org/mentor-training/when2meet-guide.html) — Creating polls, interpreting overlaps, and updating existing responses.
+- [Google Calendar — Calendar Sharing](https://support.google.com/calendar/answer/37082) — Sharing permissions, including free/busy visibility that hides appointment details.
+- [Calendly — Event Type Settings](https://calendly.com/help/how-to-customize-your-event-types) — Configuring meeting purposes, availability, and booking settings.
+- [Calendly — Meeting Polls](https://calendly.com/help/how-to-set-up-a-meeting-poll) — Collecting participants' preferred times and confirming a meeting.
+- [Howbout — Finding Friends' Availability](https://howbout.app/get-help/find-availability) — Finding free time using synced calendars and privacy settings.
+- [Howbout — App Store](https://apps.apple.com/us/app/howbout-shared-calendar/id1477248221) — Overview of its social calendar and planning features.
 
 ## Solution Sketch
 
-Create a simple-to-use app that allows users to share times they are willing to meet with their group and plan out gatherings accordingly. This is different than times when one is simply available, as an open time slot does not necessarily imply willingness and a commitment to gather. Users can create and be part of several different groups depending on who they want to hang out with. After everyone in the party shares their availibilities, anyone is free to send out invitations for an event they have in mind. Users can accept/decline invitations, and the users have the final say on whether to officially add the event to their schedule after a group discussion.
+We propose a web app that lets existing groups of friends maintain a shared record of when they would welcome invitations. A person selects open times, gives them a purpose such as dinner or studying together, and chooses which groups may use them to find shared overlaps. Individual openings remain private, and authorized groups only see the resulting overlaps. These openings communicate willingness without exposing the person's complete calendar or committing them to a particular gathering. Friends can discover an opportunity before someone takes on the work of organizing a plan. The record remains useful across multiple gatherings. If someone's work schedule or preferences change, they update their openings in one place, and the relevant groups see the revised overlaps. Dated openings expire unless renewed. This gives friends a current reference instead of requiring them to reconstruct availability from earlier messages or separate polls. 
 
-To avoid the problems of group chats and scheduling polls, users only create one set of availibility times, so that there is no need to manually reenter ones' times across different events and groups. Users can update their times at any point, and the app will reflect this change across all groups, finding new available times for the group to meet. 
+When someone notices a suitable overlap, they propose an activity, time, and place. Invited friends can accept or decline, and the initiator confirms the gathering for those who have accepted. Unanswered invitations remain pending. Confirmation records an agreement to meet and removes conflicting openings across groups without revealing private event details. A later availability change flags affected plans but does not silently move or cancel them. Participants must explicitly withdraw or accept a revised time. The interaction should remain close to how casual plans already begin. Invitations can be shared in existing group chats, and an initiator can record a nonuser's response with permission. 
+
+The initial version will focus on sharing openings, discovering overlaps, and confirming gatherings.  Updating one record keeps changing preferences consistent. Explicit acceptance separates an opportunity from a commitment. Together, these behaviors aim to reduce repeated coordination while preserving the freedom to decline. Whether those benefits justify signing up and maintaining openings will need to be tested with users.
 
 ## Ethical Analysis
 
@@ -116,40 +107,46 @@ To avoid the problems of group chats and scheduling polls, users only create one
     - **Dimension**: Stakeholders
     - **Prompt**: For the plan initiator stakeholder role, note at least one concern specific to that role.
     - **Feature**: Event invitation acceptance
-    - **Consequence**: A huge consequence is frequently having no-shows at planned events, which can be costly in the worst case.
-  - **Design Response**: Although it is impossible to predict if someone will show up to an event, the app could support a feature that will allow users to tag no-shows after every event for future reference. In addition, the plan initiator is always free to create a new group without the no-show.
+    - **Consequence**: No-shows can waste organizers' time and resources and cause users to lose confidence in the app.
+  - **Design Response**: Organizers could keep private attendance notes that participants can explain or correct, helping groups plan future gatherings without publicly labeling people as unreliable or automatically excluding them, but still holding them accountable.
+
 2. **Insight 2**
   - **Observation**:
     - **Dimension**: Stakeholders
     - **Prompt**: For the invitee stakeholder role, note at least one concern specific to that role.
-    - **Feature**: Event invitation acceptance
-    - **Consequence**: A huge consequence is having a schedule change at the last minute that prevents the invitee from attending an event that has already been added to the group schedule.
-  - **Design Response**: Add a feature where invitees can cancel events in their schedule, notifying everyone in the group of this change.
+    - **Feature**: Event cancellation
+    - **Consequence**: An unexpected schedule change may prevent someone from attending a confirmed gathering.
+  - **Design Response**: Let invitees withdraw their own attendance and notify affected participants without requiring a personal explanation. The gathering remains scheduled for others, balancing organizers' need for notice with invitees' flexibility.
+
 3. **Insight 3**
   - **Observation**:
     - **Dimension**: Time
     - **Prompt**: Visualize one lifestyle change that could be supported by your technology.
     - **Feature**: Adding open times
-    - **Consequence**: A consequence is being forced to create a more structured day. Since the times one enters are times they are willing to meet, users might have to think more about when they want alone time rather than it just being any time they are free. They must now anticipate for invites sent during those previous alone times. 
-  - **Design Response**: Allow users to tag times with various levels of willingness to meet rather than just a binary variable (will vs. won't meet).
+    - **Consequence**: Users may feel pressure to structure their personal time and anticipate invitations instead of deciding spontaneously.
+  - **Design Response**: Allow users to express different levels of willingness and revise them as their preferences change. These labels communicate flexibility, while each gathering still requires explicit acceptance.
+
 4. **Insight 4**
   - **Observation**:
     - **Dimension**: Time
     - **Prompt**: Imagine five years out from now and consider how the system might influence friendships and family relationships.
     - **Feature**: Event scheduling
-    - **Consequence**: A positive consequence is strengthening friend and family relationships, as our app encourages people to meet together and has a higher rate of success than the current methods.
-  - **Design Response**: To enforce group gatherings, we can add a new feature that recommends events for groups to do together. These recommendations should not crowd the screen as users should still be at the center of deciding what they want to do, but will rather appear as suggestions.
+    - **Consequence**: Helping friends initiate gatherings could support relationships between friends and family.
+  - **Design Response**: To promote group gatherings, we can offer optional activity suggestions based on shared openings, while letting users choose activities and mute recommendations. This supports connection without treating participation as an obligation.
+
 5. **Insight 5**
-  - **Observation**:
-    - **Dimension**: Values
-    - **Prompt**: Deliberate on and then designate a couple primary values the system ideally would support.
-    - **Feature**: Many; event scheduling and adding open times
-    - **Consequence**: Consequences of these features in terms of the primary values include encouraging connection through group gatherings and privacy protection as one does not need to share every detail of their personal calendar.
-  - **Design Response**: To encourage attendance and connection at gatherings, the app will create a personal schedule for the user with events that have been accepted and confirmed. To further enforce privacy, instead of just hiding the events a user has in their calendar, we also hide one's available times so that they are only viewable to the user.
+   - **Observation:**
+     - **Dimension:** Values
+     - **Prompt:** Deliberate on and then designate a couple primary values the system ideally would support.
+     - **Feature:** Sharing open times
+     - **Consequence:** Finding opportunities supports connection, but exposing individual availability can reveal personal routines and sensitive information.
+   - **Design Response:** Keep individual calendars and open times private, showing authorized groups only their shared overlaps. This allows friends to arrange gatherings while limiting disclosure, although shared overlaps still reveal some availability.
+
 6. **Insight 6**
-  - **Observation**:
-    - **Dimension**: Pervasiveness
-    - **Prompt**: Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
-    - **Feature** Group creation
-    - **Consequence**: With thousands of stakeholders, interactions may arise that are not just between in-person friend groups. For example, scheduling the best time to host a review session for a class. Manually adding everyone to a group is tedious.
-  - **Design Response**: Support a feature that creates an invitation link for groups to avoid unnecessary manual work. 
+
+   - **Observation:**
+     - **Dimension:** Pervasiveness
+     - **Prompt:** Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
+     - **Feature:** Group creation
+     - **Consequence:** Expanding from friend groups to class review sessions makes adding participants individually burdensome and can exclude classmates who lack the app.
+   - **Design Response:** Provide shareable group invitation links and let nonusers view invitations and respond without registering, reducing administrative effort while preserving access.
