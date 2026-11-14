@@ -187,7 +187,7 @@ state
 
 actions
   create (owner: User, purpose: String, start: DateTime, end: DateTime) : return (opening: Opening)
-    where purpose is not blank, start is before end, and end is in the future
+    where purpose is not blank, start is before end, end is in the future, and interval does not conflict with user's existing openings
     then
       create opening with the supplied owner, purpose, interval, and an empty audience
       return opening
