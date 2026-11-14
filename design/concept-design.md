@@ -164,8 +164,8 @@ concept AvailabilitySharing
 purpose communicate when invitations for a particular purpose are welcome
   to selected audiences
 
-principle a user publishes a dated opening, gives it a purpose, and
-  selects audiences that may use it. The user can revise or withdraw
+principle a user creates a dated opening, gives it a purpose, and publishes it
+  to select audiences that may use it. The user can revise or withdraw
   that opening. One record serves all selected audiences, and an opening
   stops contributing after its end time. Sharing an opening does not
   commit its owner to a particular invitation.
@@ -183,24 +183,26 @@ state
     an audiences set of Audience
 
   Rule: Each opening has start before end, a nonblank purpose,
-    and at least one audience.
+    and do not conflict with each other.
 
 actions
-  publish (owner: User, purpose: String, start: DateTime, end: DateTime,
-    audiences: set of Audience) : return (opening: Opening)
-    where purpose is not blank, audiences is not empty,
-      start is before end, and end is in the future
+  create (owner: User, purpose: String, start: DateTime, end: DateTime) : return (opening: Opening)
+    where purpose is not blank, start is before end, end is in the future, and interval does not conflict with user's existing openings
     then
-      create opening with the supplied owner, purpose, interval,
-        and audiences
+      create opening with the supplied owner, purpose, interval, and an empty audience
       return opening
+
+  publish (user: User, opening: Opening, audiences: set of Audience) : return ()
+    where opening exists with owner user
+    then
+      share opening with the audiences
+      return
 
   revise (user: User, opening: Opening, purpose: String,
     start: DateTime, end: DateTime, audiences: set of Audience)
     : return ()
     where opening exists with owner user and has not ended,
-      purpose is not blank, audiences is not empty,
-      start is before end, end is in the future,
+      purpose is not blank, start is before end, end is in the future,
       and at least one supplied value differs from its recorded value
     then
       set opening's purpose, start, end, and audiences to the supplied values
@@ -515,18 +517,31 @@ then
 
 **Notes.** Grouping's own preconditions require an active group and its owner. Creating, accepting, declining, leaving, removing, and closing use the same authentication pattern and their corresponding Grouping actions. A group-invitation view retrieves `_membership(user, group)` and `_getGroup(group)`; only a current member or pending invitee receives its details. `_groupsFor(user)` supplies the authenticated user's group list.
 
+### Creating an opening
+
+```text
+when
+  Requesting.createOpening(session, purpose, start, end)
+  and Authenticating.authenticate(session) returns user
+    within that request's flow
+then
+  AvailabilitySharing.create(user, purpose, start, end)
+```
+
+**Notes.** Users can only create openings for themselves. Openings cannot overlap with existing ones. Upon creation, openings are not shared with anyone.
+
 ### Publish an opening to selected groups
 
 ```text
 when
-  Requesting.publishOpening(session, purpose, start, end, groups)
+  Requesting.publishOpening(session, opening, groups)
   and Authenticating.authenticate(session) returns user
     within that request's flow
 where
   for every group in groups, Grouping._getGroup(group) returns
     status = ACTIVE and members containing user
 then
-  AvailabilitySharing.publish(user, purpose, start, end, groups)
+  AvailabilitySharing.publish(user, opening, groups)
 ```
 
 **Notes.** Revision uses the same membership check for every group in the replacement audience set and invokes `AvailabilitySharing.revise`. Withdrawal requires authentication and invokes `withdraw`, whose owner check prevents changes to another person's opening. `_owned(user)` supplies the authenticated user's opening editor. Group membership is checked again whenever overlaps are requested, so leaving or closing a group stops its use of an opening immediately without modifying that opening.
