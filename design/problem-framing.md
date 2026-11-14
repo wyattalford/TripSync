@@ -135,18 +135,17 @@ The initial version will focus on sharing openings, discovering overlaps, and co
   - **Design Response**: To promote group gatherings, we can offer optional activity suggestions based on shared openings, while letting users choose activities and mute recommendations. This supports connection without treating participation as an obligation.
 
 5. **Insight 5**
-   - **Observation:**
-     - **Dimension:** Values
-     - **Prompt:** Deliberate on and then designate a couple primary values the system ideally would support.
-     - **Feature:** Sharing open times
-     - **Consequence:** Finding opportunities supports connection, but exposing individual availability can reveal personal routines and sensitive information.
-   - **Design Response:** Keep individual calendars and open times private, showing authorized groups only their shared overlaps. This allows friends to arrange gatherings while limiting disclosure, although shared overlaps still reveal some availability.
+  - **Observation:**
+    - **Dimension:** Values
+    - **Prompt:** Deliberate on and then designate a couple primary values the system ideally would support.
+    - **Feature:** Sharing open times
+    - **Consequence:** Finding opportunities supports connection, but exposing individual availability can reveal personal routines and sensitive information.
+  - **Design Response:** Keep individual calendars and open times private, showing authorized groups only their shared overlaps. This allows friends to arrange gatherings while limiting disclosure, although shared overlaps still reveal some availability.
 
 6. **Insight 6**
-
-   - **Observation:**
-     - **Dimension:** Pervasiveness
-     - **Prompt:** Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
-     - **Feature:** Group creation
-     - **Consequence:** Expanding from friend groups to class review sessions makes adding participants individually burdensome and can exclude classmates who lack the app.
-   - **Design Response:** Provide shareable group invitation links and let nonusers view invitations and respond without registering, reducing administrative effort while preserving access.
+  - **Observation:**
+    - **Dimension:** Pervasiveness
+    - **Prompt:** Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
+    - **Feature:** Group creation
+    - **Consequence:** Expanding from friend groups to class review sessions makes adding participants individually burdensome and can exclude classmates who lack the app.
+  - **Design Response:** Provide shareable group invitation links and let nonusers view invitations and respond without registering, reducing administrative effort while preserving access.
