@@ -64,9 +64,11 @@ concept Grouping
 purpose maintain a shared, consensual record of who belongs to a group
 
 principle a user creates a group and becomes its owner and first member.
-  The owner invites others, who become members only by accepting.
-  Members may leave, and the owner may remove members or close the group.
-  An invitation alone does not establish membership.
+  The owner invites others individually or shares the group's join URL.
+  Others become members only by accepting an invitation or choosing
+  to join through that URL. Members may leave, and the owner may remove
+  members or close the group. Receiving an invitation alone does not
+  establish membership.
 
 types
   external User
@@ -78,7 +80,7 @@ state
     an owner User
     a name String
     a status GroupStatus
-    a url String
+    a unique url String
 
   a set of Memberships with
     a group Group
@@ -93,8 +95,9 @@ actions
   create (owner: User, name: String) : return (group: Group)
     where name is not blank
     then
+      generate a fresh, unguessable join URL
       create group with the supplied owner and name, status ACTIVE,
-        and uniquely generated join url
+        and the generated URL
       create a MEMBER membership for owner in group
       return group
 
@@ -121,10 +124,12 @@ actions
       return
 
   join (user: User, url: String) : return ()
-    where the group of url exists, group is ACTIVE,
-      and user's membership is PENDING, DECLINED, LEFT, or absent
+    where a group has the supplied url and status ACTIVE,
+      and user either has no membership in that group or has
+        membership status PENDING, DECLINED, or LEFT
     then
-      set user's membership to MEMBER
+      create user's membership in that group if absent
+      set that membership's status to MEMBER
       return
 
   leave (user: User, group: Group) : return ()
@@ -161,6 +166,9 @@ queries
 
   _groupsFor (user: User) : many (group: Group)
     Returns active groups in which user is a MEMBER, in unspecified order.
+
+  _joinUrl (group: Group) : optional (url: String)
+    Returns group's join URL; no row if group does not exist.
 ```
 
 **Notes.** Grouping owns membership, not openings or gatherings. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
@@ -191,20 +199,26 @@ state
     an end DateTime
     an audiences set of Audience
 
-  Rule: Each opening has start before end, a nonblank purpose,
-    and do not conflict with each other.
+  Rule: Each opening has start before end and a nonblank purpose.
+    Openings belonging to the same owner must not overlap.
+    Openings belonging to different owners may overlap.
 
 actions
-  create (owner: User, purpose: String, start: DateTime, end: DateTime) : return (opening: Opening)
-    where purpose is not blank, start is before end, end is in the future, and interval does not conflict with user's existing openings
+  create (owner: User, purpose: String, start: DateTime, end: DateTime)
+    : return (opening: Opening)
+    where purpose is not blank, start is before end,
+      end is in the future,
+      and no opening owned by owner overlaps [start, end)
     then
-      create opening with the supplied owner, purpose, interval, and an empty audience
+      create opening with the supplied owner, purpose, start, and end,
+        and an empty audiences set
       return opening
 
-  publish (user: User, opening: Opening, audiences: set of Audience) : return ()
+  publish (user: User, opening: Opening, audiences: set of Audience)
+    : return ()
     where opening exists with owner user
     then
-      share opening with the audiences
+      set opening's audiences to the supplied audiences
       return
 
   revise (user: User, opening: Opening, purpose: String,
@@ -212,6 +226,7 @@ actions
     : return ()
     where opening exists with owner user and has not ended,
       purpose is not blank, start is before end, end is in the future,
+      no other opening owned by user overlaps [start, end),
       and at least one supplied value differs from its recorded value
     then
       set opening's purpose, start, end, and audiences to the supplied values
@@ -240,7 +255,7 @@ queries
 
 **Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old willingness is not assumed to continue. Purpose values use consistent application labels such as dinner, studying, or watching a movie. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
 
-All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Overlapping openings with the same purpose are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
+All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner and matching the same purpose are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
 
 ## Gathering
 
@@ -524,7 +539,36 @@ then
   Grouping.invite(user, group, invitee)
 ```
 
-**Notes.** Grouping's own preconditions require an active group and its owner. Creating, accepting, declining, leaving, removing, and closing use the same authentication pattern and their corresponding Grouping actions. A group-invitation view retrieves `_membership(user, group)` and `_getGroup(group)`; only a current member or pending invitee receives its details. `_groupsFor(user)` supplies the authenticated user's group list. A group's join url is an alternative way to send out invitations on third-party messaging platforms, where `join` confirms the invitee is registered and allowed to join.
+**Notes.** Grouping's own preconditions require an active group and its owner. Creating, accepting, declining, leaving, removing, and closing use the same authentication pattern and their corresponding Grouping actions. A group-invitation view retrieves `_membership(user, group)` and `_getGroup(group)`; only a current member or pending invitee receives its details. `_groupsFor(user)` supplies the authenticated user's group list. The reactions below authenticate requests to retrieve a join URL or join through it.
+
+### Retrieve a group's join link
+
+```text
+when
+  Requesting.viewGroupJoinLink(session, group)
+  and Authenticating.authenticate(session) returns user
+    within that request's flow
+where
+  Grouping._getGroup(group) returns owner = user and status = ACTIVE
+  Grouping._joinUrl(group) returns url
+then
+  respond to that requester with url
+```
+
+**Notes.** The owner retrieves the link to share through an existing conversation. The link permits authenticated users to request membership; it does not reveal openings or group details before they join.
+
+### Join through a shared link
+
+```text
+when
+  Requesting.joinGroup(session, url)
+  and Authenticating.authenticate(session) returns user
+    within that request's flow
+then
+  Grouping.join(user, url)
+```
+
+**Notes.** Authentication establishes the joining account. Grouping checks that the URL identifies an active group and that the user is eligible to join. Opening a link alone does not establish membership. Removed users require a new invitation from the owner.
 
 ### Creating an opening
 

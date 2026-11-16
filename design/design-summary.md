@@ -2,29 +2,33 @@
 
 ## The Problem
 
-The core problem OpenTime solves is coordinating availabilities within a group to schedule an event by making the process simple, organized, and automated. Our identified bad situations include:
-
-- Lack of coordination and confirmation when planning events.
-- Ambiguous availability times; whether one is willing to meet during a seemingly open time slot.
-- Unknown and unclear availability times.
+Friends can miss opportunities to spend time together even when they are willing and available. Someone must discover that an invitation would be welcome, propose concrete details, and establish who has committed. Group chats can leave these decisions scattered across messages, while an empty calendar does not necessarily communicate willingness to socialize. OpenTime aims to make shared willingness discoverable and help friends turn it into a definite plan without exposing their complete schedules.
 
 ## Concepts
 
-- `Authenticating` allows users to input, store, and publish times they are **willing to meet** in one place through `AvailabilitySharing`. Groups, created by `Grouping`, dictate who one can share their availabilities with. These three concepts work together to remove any questions of unwilling times to meet and solidify when people in a group are available.
-- After a group shares their open times with one another and finds possible slots to meet, a group member may propose an event with `Gathering`, sending the invitation to all members. Each person may either accept, decline, or withdraw their acceptance to formalize their presence at the event. The gathering organizer may edit the event details, sending out new invitations to those affected. In addition, the organizer may cancel the event altogether.
-- To address the possible lack of communication during event planning, the `Notifying` concept sends messages to group members for important notices, such as a sent invitation, event detail change, and cancellations.
+- `Authenticating` identifies the account responsible for each request. `Grouping` maintains consensual group membership through individual invitations or shared join links. Reactions use identity and membership to control access.
+- `AvailabilitySharing` lets users create purpose-specific openings and publish them to selected groups. One opening can serve several groups. Reactions calculate common intervals from current members' shared openings, excluding their confirmed commitments. Other members receive these overlaps rather than individual openings.
+- `Gathering` turns a proposal into a confirmed arrangement. An organizer chooses invitees from the group, proposes an activity, time, and place, and confirms those who explicitly accept. Additional invitees can join a confirmed gathering by accepting its current details. Editing creates a new version requiring fresh acceptance and confirmation.
+- `Notifying` provides an in-app inbox for invitations, responses, edits, confirmation, withdrawal, and cancellation. Reactions specify the recipients of each notice. Reading a notice does not establish acceptance or attendance.
 
-With the five above concepts, OpenTime guarantees reducing the likelihood of encountering the aforementioned bad situations by ensuring one's available times are communicated with others clearly and that tentative plans become gatherings.
+With the five above concepts, OpenTime aims to reduce the likelihood of encountering the aforementioned bad situations by ensuring one's available times are communicated with others clearly and that tentative plans become gatherings. We will test this theory during user testing.
 
 ## Addressed Ethical Analysis Concerns
 
-Our design addresses the following concerns brought up from our [ethical analysis](./problem-framing.md#ethical-analysis):
+Our design responds to the following concerns from the [ethical analysis](problem-framing.md#ethical-analysis):
 
-1. **Last minute schedule change after confirmation:** Invitees can `withdraw` their attendance to a gathering under the `Gathering` concept. A reaction notifies the event organizer and other attendees of the withdrawl with the `Notifying` concept.
-2. **Privacy concerns with sharing schedules:** Users only know their own specific open times; only overlaps are shared within a group. The `AvailabilitySharing` concept handles creating and sharing times, and it is important to note that others only see group overlaps through reactions, never the entire schedule of one individual.
-3. **Scheduling an event for large groups requires registration and manual work:** Each gathering under the `Gathering` concept has its own URL for easy distribution to large audiences. However, each invitee must still register and authenticate with their account with `Authenticating` to formally `join` a group. **Note: This feature might not be fully implemented in the MVP.**
+1. **Changing plans without overriding consent:** Participants can withdraw without giving a personal explanation, and affected people receive notices. Editing requires fresh acceptance of the revised details. If the last non-organizer attendee withdraws and no invitations remain pending, the confirmed gathering closes automatically.
+
+2. **Privacy when sharing willingness:** Individual openings remain private to their owners. Authorized group members receive only calculated overlaps, with no details of conflicting gatherings. These aggregate results can still reveal some availability, especially in two-person groups, so privacy is limited rather than absolute.
+
+3. **Exclusion of people who do not adopt the app:** Group join links reduce individual invitation work, but joining and responding still require an account. A gathering URL identifies an event without granting membership or attendance rights. Nonuser participation remains unresolved and more of a stretch goal.
+
+4. **Pressure to participate and uncertainty for organizers:** Openings do not count as acceptance, and silence remains pending. Explicit responses and withdrawal notices help organizers understand commitments without requiring public reliability ratings or explanations for declining. The app cannot prevent no-shows or guarantee that friends will cooperate.
 
 ## Unclear Issues
 
-- Flexibility on proposing events to just a couple individuals within a larger group. Currently, users must create new groups to solve this problem, but this may get tedious over time for both the group owner and members.
-- Scalability for notifications as for larger groups, flooding one's inbox with notifications is undesirable. This raises the questions of which messages are important enough to require delivery and how customizable should notification settings be.
+- **Overlaps for selected members:** Gatherings may invite a subset of a group's members, but overlap discovery currently requires a common opening across the entire group. We need to test whether this is useful enough or whether users need a way to find overlaps for selected members without creating another group.
+
+- **Notification volume:** Larger groups may generate too many notices. Testing should establish which changes people need to see and whether notification preferences or batching would help. The MVP uses the notices specified in the concept design.
+
+- **Adoption and maintaining openings:** The benefit depends on friends keeping their openings current. We need to test whether the opportunities discovered justify that effort and whether nonusers become excluded. Willingness levels, activity suggestions, and guest participation remain possible extensions rather than prerequisites for the core workflow.

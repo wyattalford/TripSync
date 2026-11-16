@@ -36,4 +36,6 @@ I'm really looking forward to working in a team environment after mostly doing s
 
 My name is Varun. I am a 6-3 Junior at MIT and am originally from Dallas, Texas. I am excited to build software together as a team.
 
-### Q&A
+## Responsibilities and Working Agreement
+
+Our [development plan](design/development-plan.md#2-team-responsibilities) describes each member's responsibilities, review assignments, and working agreement for the build.

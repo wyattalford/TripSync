@@ -9,7 +9,7 @@ The primary stakeholders are friends who want to spend time together without mak
 ## Stakeholders
 
 - **Person initiating a plan:** Suggests a gathering and wants to find interested friends without repeatedly asking each person when they are available.
-- **Potential participant:** Decide whether to join and need to understand the proposed time and activity before committing.
+- **Potential participant:** Decides whether to join and needs to understand the proposed time and activity before committing.
 - **Friends outside the planning channel:** May be left out when invitations circulate through a particular app or group chat they do not use.
 
 ## Bad Situations
@@ -96,7 +96,7 @@ The remaining opportunity is helping friends maintain a shared understanding of 
 
 We propose a web app that lets existing groups of friends maintain a shared record of when they would welcome invitations. A person selects open times, gives them a purpose such as dinner or studying together, and chooses which groups may use them to find shared overlaps. Individual openings remain private, and authorized groups only see the resulting overlaps. These openings communicate willingness without exposing the person's complete calendar or committing them to a particular gathering. Friends can discover an opportunity before someone takes on the work of organizing a plan. The record remains useful across multiple gatherings. If someone's work schedule or preferences change, they update their openings in one place, and the relevant groups see the revised overlaps. Dated openings expire unless renewed. This gives friends a current reference instead of requiring them to reconstruct availability from earlier messages or separate polls. 
 
-When someone notices a suitable overlap, they propose an activity, time, and place. Invited friends can accept or decline, and the initiator confirms the gathering for those who have accepted. Unanswered invitations remain pending. Confirmation records an agreement to meet and removes conflicting openings across groups without revealing private event details. A later availability change flags affected plans but does not silently move or cancel them. Participants must explicitly withdraw or accept a revised time. The interaction should remain close to how casual plans already begin. Invitations can be shared in existing group chats, and an initiator can record a nonuser's response with permission. 
+When someone notices a suitable overlap, they propose an activity, time, and place. Invited friends can accept or decline, and the initiator confirms the gathering for those who have accepted. Unanswered invitations remain pending. Confirmation excludes committed time from overlap results across groups without deleting saved openings or revealing private event details. Additional friends can be invited after confirmation without changing existing acceptances. Editing the activity, time, or place requires fresh acceptance and confirmation. A later change to someone's openings flags affected plans but does not silently change their attendance. Group invitation links can be shared through existing conversations, but joining groups and responding to gatherings require an account. Nonuser responses are outside the initial scope.
 
 The initial version will focus on sharing openings, discovering overlaps, and confirming gatherings.  Updating one record keeps changing preferences consistent. Explicit acceptance separates an opportunity from a commitment. Together, these behaviors aim to reduce repeated coordination while preserving the freedom to decline. Whether those benefits justify signing up and maintaining openings will need to be tested with users.
 
@@ -108,7 +108,7 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt**: For the plan initiator stakeholder role, note at least one concern specific to that role.
     - **Feature**: Event invitation acceptance
     - **Consequence**: No-shows can waste organizers' time and resources and cause users to lose confidence in the app.
-  - **Design Response**: Organizers could keep private attendance notes that participants can explain or correct, helping groups plan future gatherings without publicly labeling people as unreliable or automatically excluding them, but still holding them accountable.
+  - **Design Response**: Show explicit invitation responses and notify affected participants when an accepted attendee withdraws. This gives organizers a current record of commitments without publicly rating reliability or automatically excluding people. The app cannot directly prevent no-shows, so testing should examine whether clearer responses and withdrawal notices reduce uncertainty.
 
 2. **Insight 2**
   - **Observation**:
@@ -116,7 +116,7 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt**: For the invitee stakeholder role, note at least one concern specific to that role.
     - **Feature**: Event cancellation
     - **Consequence**: An unexpected schedule change may prevent someone from attending a confirmed gathering.
-  - **Design Response**: Let invitees withdraw their own attendance and notify affected participants without requiring a personal explanation. The gathering remains scheduled for others, balancing organizers' need for notice with invitees' flexibility.
+  - **Design Response**: Let invitees withdraw their attendance and notify affected participants without requiring a personal explanation. The gathering remains confirmed unless the last non-organizer attendee withdraws and no invitations remain pending, in which case it closes automatically. This balances organizers' need for notice with invitees' flexibility.
 
 3. **Insight 3**
   - **Observation**:
@@ -124,7 +124,7 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt**: Visualize one lifestyle change that could be supported by your technology.
     - **Feature**: Adding open times
     - **Consequence**: Users may feel pressure to structure their personal time and anticipate invitations instead of deciding spontaneously.
-  - **Design Response**: Allow users to express different levels of willingness and revise them as their preferences change. These labels communicate flexibility, while each gathering still requires explicit acceptance.
+  - **Design Response**: Let users revise or withdraw purpose-specific openings as their preferences change. An opening communicates willingness to receive an invitation, while attendance requires explicit acceptance of a particular gathering. Different levels of willingness remain a stretch goal, so the initial version does not require users to classify how strongly they want to socialize.
 
 4. **Insight 4**
   - **Observation**:
@@ -132,7 +132,7 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt**: Imagine five years out from now and consider how the system might influence friendships and family relationships.
     - **Feature**: Event scheduling
     - **Consequence**: Helping friends initiate gatherings could support relationships between friends and family.
-  - **Design Response**: To promote group gatherings, we can offer optional activity suggestions based on shared openings, while letting users choose activities and mute recommendations. This supports connection without treating participation as an obligation.
+  - **Design Response**: Help friends discover shared openings and propose gatherings while keeping participation voluntary. We will test whether this leads to opportunities that would otherwise be missed. Optional activity suggestions remain a stretch goal rather than a requirement for using the initial version.
 
 5. **Insight 5**
   - **Observation:**
@@ -148,4 +148,4 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt:** Envision your system with 1, 100, 1000, and 100,000 stakeholders. What new interactions might emerge from widespread use?
     - **Feature:** Group creation
     - **Consequence:** Expanding from friend groups to class review sessions makes adding participants individually burdensome and can exclude classmates who lack the app.
-  - **Design Response:** Provide shareable group invitation links and let nonusers view invitations and respond without registering, reducing administrative effort while preserving access.
+  - **Design Response:** Provide shareable group invitation links so organizers do not need to invite every registered user individually. Joining and responding still require an account, so this does not fully address exclusion of friends who do not adopt the app. We will examine this risk during group testing and encourage organizers to continue sharing confirmed plan details through existing conversations. Guest participation remains a possible future improvement.

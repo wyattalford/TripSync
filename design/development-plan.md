@@ -8,18 +8,17 @@ This plan builds OpenTime in vertical slices. Each checkpoint should be a deploy
 | --- | --- | --- |
 | Nov 16 | **F3: Concept design** | Final concept specifications and reactions, user journey, visual design study, design summary, and this plan. |
 | Nov 17–19 | Setup | Repository structure, database, sync engine wiring, and a deployment pipeline. Each concept gets a stub with its actions and queries, and the team agrees on API routes and request/response shapes. |
-| Nov 23 | **Checkpoint 1: Alpha** | A deployed app covering the first half of the journey. Users can register, sign in, and sign out (Authenticating). They can create a group, invite members, and accept or decline (Grouping). They can create, publish, revise, and withdraw dated openings (AvailabilitySharing). They can view their group's overlaps as a simple list or day view. The UI is functional and only lightly styled. We will run user tests on these flows and prioritize the findings for Beta. |
-| Nov 30 | **Checkpoint 2: Beta** | The full core journey. An organizer proposes a gathering from an overlap, invitees accept or decline, the organizer confirms, and more people can be invited after confirmation (Gathering). Editing creates a new version that needs fresh acceptance; attendees can withdraw and the organizer can cancel. Conflicts with confirmed gatherings are checked. Every essential reaction produces an in-app notice (Notifying). The visual design study is applied across the app. We will test the complete journey with users and use the findings for final refinements. |
+| Nov 23 | **Checkpoint 1: Alpha** | A deployed app covering the first half of the journey. Users can register, sign in, and sign out (Authenticating). They can create a group, invite members individually, accept or decline invitations, and join through a shared group link after signing in (Grouping). They can create, publish, revise, and withdraw dated openings (AvailabilitySharing). They can view their group's overlaps as a simple list or day view. The UI is functional and only lightly styled. We will run user tests on these flows and prioritize the findings for Beta. |
+| Nov 30 | **Checkpoint 2: Beta** | The full core journey. An organizer proposes a gathering from an overlap, invitees accept or decline, the organizer confirms, and more people can be invited after confirmation (Gathering). Editing creates a new version requiring fresh acceptance and confirmation. Attendees can withdraw, and the organizer can cancel. If the last non-organizer attendee withdraws and no invitations remain pending, the gathering closes automatically. Conflicts with confirmed gatherings are checked. In-app notices cover the invitations, responses, edits, confirmation, withdrawal, and cancellation specified in the essential reactions (Notifying). The visual design study is applied across the app. We will test the complete journey with users and use the findings for final refinements. |
 | Dec 1–7 | Final user testing and refinement | At least three real friend groups use the complete app for planning. We watch where people hesitate, note any confusion between being open and being committed, and fix the most important problems we find. After those fixes, we will run a final end-to-end validation round to confirm that the core journey works for users. |
 | Dec 9 | **Final demo** | UI polish, bug fixes, empty and error states, final documentation (README, updated design docs, testing report), and a rehearsed demo informed by the results of the final user-testing round. |
 
 **Stretch goals** come from our ethical analysis and are attempted only after Beta is stable:
 
-- Shareable group invitation links (Insight 6)
-- Levels of willingness on openings, such as "would love to" vs. "could be convinced" (Insight 3)
+- Levels of willingness on openings, such as "would love to" versus "could be convinced" (Insight 3)
 - Optional activity suggestions for an overlap (Insight 4)
 
-The design summary lists these as open issues rather than MVP commitments.
+Shareable group invitation links are part of the core Grouping design and are scheduled for Alpha. They require an account, but registration-free guest participation remains a possible future extension rather than an MVP commitment.
 
 ## 2. Team Responsibilities
 
@@ -27,7 +26,7 @@ Each person owns concepts from backend to frontend. The owner builds the concept
 
 | Member | Primary ownership | Reviews |
 | --- | --- | --- |
-| Varun | Grouping: group creation, invitations, accepting and declining, leaving and removal, membership screens, and the membership checks other reactions rely on. Also owns the frontend shell (shared layout, navigation, and design system from the visual study). | Anthony |
+| Varun | Grouping: group creation, individual invitations, shared join links, accepting and declining, leaving, removal, and closure. Owns membership screens and the membership checks other reactions rely on. Also owns the frontend shell (shared layout, navigation, and design system from the visual study). | Anthony |
 | Anthony | AvailabilitySharing: the openings editor, publishing to groups, the overlap calculation (`_sharedWith` across members), and the group overlap view. | Varun |
 | Wyatt | Gathering: proposals, versioning, accept/decline/confirm, withdraw/cancel, the conflict checks against confirmed gatherings, and the gathering detail page. Also owns deployment and the database. | Desire |
 | Desire | Authenticating and Notifying: registration, sign-in/sign-out, request authentication, the notice inbox, and all notification reactions. Also coordinates user testing. | Wyatt |
@@ -45,16 +44,18 @@ Each person owns concepts from backend to frontend. The owner builds the concept
 | Risk | Why it matters | Mitigation | Fallback |
 | --- | --- | --- | --- |
 | **Gathering is too complex to finish by Beta** | Gathering is the heart of the app and our largest concept. Versioning, fresh acceptance after edits, automatic closure, and conflict checks all interact, and Beta falls right after Thanksgiving. | Build the simplest lifecycle first (propose, accept, decline, confirm, cancel), then add `invite`, `withdraw`, and finally `edit`. Write tests from the spec before connecting the UI. | Treat an edit as "cancel and re-propose to the same invitees." This keeps the rule that a changed plan needs fresh acceptance, without storing version history. |
-| **Overlaps reveal people's private openings** | Our privacy commitment ([ethical analysis](problem-framing.md#ethical-analysis)) is that members see only shared overlaps, never someone's individual openings. Computing overlaps in the browser from raw openings would break this. | Compute overlaps only on the server, inside the reaction that checks group membership. Responses contain overlap intervals, not other people's openings. Add tests checking that no other member's opening appears in any response. | Show only times when *every* member is open, with no count of how many people are free. This reveals less but is less useful in larger groups. |
+| **Overlaps reveal people's private openings** | Our privacy commitment ([ethical analysis](problem-framing.md#ethical-analysis)) is that members see only shared overlaps, never someone's individual openings. Computing overlaps in the browser from raw openings would break this. | Compute overlaps only on the server, inside the reaction that checks group membership. Responses contain overlap intervals, not other people's openings. Add tests checking that no other member's opening appears in any response. | Limit overlap searches to a single selected day and use a simple server-side list view. Defer longer-range searches and interactive calendar views. Keep the same membership checks and return only overlap intervals. No fallback exposes other users' raw openings. |
 | **We can't test the core idea with real groups** | OpenTime only works when several people in the same group keep their openings up to date. Testing with individuals won't tell us whether the app actually helps friends meet, which is the main assumption our problem framing says we must test. | Recruit three real friend groups before Beta, such as a dorm floor, a sports team, and a study group. In the first session, have each group add a week of openings together so the app isn't empty. | Run moderated sessions in which team members play the other group members, and report this limitation honestly in the testing results. |
 
 ## 4. Priority Order If Time Runs Short
 
 When we have to cut scope, we protect the core journey and cut in this order, first item first:
 
-1. Stretch goals (invitation links, willingness levels, activity suggestions)
-2. Non-essential notifications (withdrawal, automatic closure, decline-to-organizer)
-3. Gathering version history (fall back to cancel and re-propose)
-4. Visual polish beyond the design study's type, color, and layout basics
+1. Stretch goals: willingness levels and activity suggestions.
+2. Richer calendar interaction and longer-range overlap searches. Instead, retain a simple view for a selected day.
+3. Gathering version history, using the documented fallback of cancelling and re-proposing with fresh acceptance.
+4. Visual polish beyond the design study's typography, color, and layout basics.
 
-We do not cut these, because they are the core of OpenTime: groups with consensual membership, private openings, server-computed overlaps, and proposals that become confirmed only through explicit acceptance.
+We retain consensual membership, private openings, server-computed overlaps, explicit acceptance and confirmation, and notices of invitations, edits, confirmation, withdrawal, and cancellation.
+
+If we adopt a fallback, we update the affected concept specifications, reactions, user journey, and design summary to describe the behavior we will actually deliver.
