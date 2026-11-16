@@ -16,7 +16,7 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 - [Core User Journey](design/core-user-journey.md) — A narrative following a friend from a missed opportunity through proposing, revising, and confirming a gathering.
 - [Development Plan](design/development-plan.md) — Checkpoint timeline, team responsibilities, and key risks with fallbacks.
 - [Design Summary](design/design-summary.md) — A summary of how the concepts work together to solve the problem and address ethical concerns.
-- [Visual Design Study](design/visual-design-study.pdf) — Two annotated slides establishing the app's typography, color, and layout.
+- [Visual Design Study](design/visual-design-study.md) — Two annotated slides establishing the app's typography, color, and layout.
 
 ## Mentor Meetings
 
