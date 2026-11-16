@@ -78,6 +78,7 @@ state
     an owner User
     a name String
     a status GroupStatus
+    a url String
 
   a set of Memberships with
     a group Group
@@ -92,7 +93,8 @@ actions
   create (owner: User, name: String) : return (group: Group)
     where name is not blank
     then
-      create group with the supplied owner and name, and status ACTIVE
+      create group with the supplied owner and name, status ACTIVE,
+        and uniquely generated join url
       create a MEMBER membership for owner in group
       return group
 
@@ -116,6 +118,13 @@ actions
     where group is ACTIVE and user's membership is PENDING
     then
       set user's membership to DECLINED
+      return
+
+  join (user: User, url: String) : return ()
+    where the group of url exists, group is ACTIVE,
+      and user's membership is PENDING, DECLINED, LEFT, or absent
+    then
+      set user's membership to MEMBER
       return
 
   leave (user: User, group: Group) : return ()
@@ -515,7 +524,7 @@ then
   Grouping.invite(user, group, invitee)
 ```
 
-**Notes.** Grouping's own preconditions require an active group and its owner. Creating, accepting, declining, leaving, removing, and closing use the same authentication pattern and their corresponding Grouping actions. A group-invitation view retrieves `_membership(user, group)` and `_getGroup(group)`; only a current member or pending invitee receives its details. `_groupsFor(user)` supplies the authenticated user's group list.
+**Notes.** Grouping's own preconditions require an active group and its owner. Creating, accepting, declining, leaving, removing, and closing use the same authentication pattern and their corresponding Grouping actions. A group-invitation view retrieves `_membership(user, group)` and `_getGroup(group)`; only a current member or pending invitee receives its details. `_groupsFor(user)` supplies the authenticated user's group list. A group's join url is an alternative way to send out invitations on third-party messaging platforms, where `join` confirms the invitee is registered and allowed to join.
 
 ### Creating an opening
 
