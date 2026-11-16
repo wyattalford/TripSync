@@ -14,6 +14,7 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 - [Problem Framing](design/problem-framing.md) — Domain, stakeholders, bad situations, supporting evidence, comparables, solution sketch, and ethical analysis.
 - [Concept Design](design/concept-design.md) — Concept specifications, essential reactions, design notes, and how the concepts work together.
 - [Core User Journey](design/core-user-journey.md) — A narrative following a friend from a missed opportunity through proposing, revising, and confirming a gathering.
+- [Development Plan](design/development-plan.md) — Checkpoint timeline, team responsibilities, and key risks with fallbacks.
 
 ## Mentor Meetings
 
