@@ -1,6 +1,6 @@
 # OpenTime: Development Plan
 
-This plan builds OpenTime in vertical slices. Each checkpoint should be a deployed version that someone can use end to end, not a set of disconnected backend pieces. The order follows the core user journey: join a group, share openings, see overlaps, then turn an overlap into a confirmed gathering.
+This plan builds OpenTime in vertical slices. Each checkpoint should be a deployed version that someone can use end to end, not a set of disconnected backend pieces. The order follows the core user journey: join a group, share openings, see overlaps, then turn an overlap into a confirmed gathering. We will conduct user testing at every development stage, use what we learn to guide the next stage, and complete a final round of end-to-end user testing before the final demo.
 
 ## 1. Timeline
 
@@ -8,10 +8,10 @@ This plan builds OpenTime in vertical slices. Each checkpoint should be a deploy
 | --- | --- | --- |
 | Nov 16 | **F3: Concept design** | Final concept specifications and reactions, user journey, visual design study, design summary, and this plan. |
 | Nov 17–19 | Setup | Repository structure, database, sync engine wiring, and a deployment pipeline. Each concept gets a stub with its actions and queries, and the team agrees on API routes and request/response shapes. |
-| Nov 23 | **Checkpoint 1: Alpha** | A deployed app covering the first half of the journey. Users can register, sign in, and sign out (Authenticating). They can create a group, invite members, and accept or decline (Grouping). They can create, publish, revise, and withdraw dated openings (AvailabilitySharing). They can view their group's overlaps as a simple list or day view. The UI is functional and only lightly styled. |
-| Nov 30 | **Checkpoint 2: Beta** | The full core journey. An organizer proposes a gathering from an overlap, invitees accept or decline, the organizer confirms, and more people can be invited after confirmation (Gathering). Editing creates a new version that needs fresh acceptance; attendees can withdraw and the organizer can cancel. Conflicts with confirmed gatherings are checked. Every essential reaction produces an in-app notice (Notifying). The visual design study is applied across the app. |
-| Dec 1–7 | User testing | At least three real friend groups use the app for planning. We watch where people hesitate, note any confusion between being open and being committed, and fix the most important problems we find. |
-| Dec 9 | **Final demo** | UI polish, bug fixes, empty and error states, final documentation (README, updated design docs, testing report), and a rehearsed demo. |
+| Nov 23 | **Checkpoint 1: Alpha** | A deployed app covering the first half of the journey. Users can register, sign in, and sign out (Authenticating). They can create a group, invite members, and accept or decline (Grouping). They can create, publish, revise, and withdraw dated openings (AvailabilitySharing). They can view their group's overlaps as a simple list or day view. The UI is functional and only lightly styled. We will run user tests on these flows and prioritize the findings for Beta. |
+| Nov 30 | **Checkpoint 2: Beta** | The full core journey. An organizer proposes a gathering from an overlap, invitees accept or decline, the organizer confirms, and more people can be invited after confirmation (Gathering). Editing creates a new version that needs fresh acceptance; attendees can withdraw and the organizer can cancel. Conflicts with confirmed gatherings are checked. Every essential reaction produces an in-app notice (Notifying). The visual design study is applied across the app. We will test the complete journey with users and use the findings for final refinements. |
+| Dec 1–7 | Final user testing and refinement | At least three real friend groups use the complete app for planning. We watch where people hesitate, note any confusion between being open and being committed, and fix the most important problems we find. After those fixes, we will run a final end-to-end validation round to confirm that the core journey works for users. |
+| Dec 9 | **Final demo** | UI polish, bug fixes, empty and error states, final documentation (README, updated design docs, testing report), and a rehearsed demo informed by the results of the final user-testing round. |
 
 **Stretch goals** come from our ethical analysis and are attempted only after Beta is stable:
 
@@ -38,6 +38,7 @@ Each person owns concepts from backend to frontend. The owner builds the concept
 - We meet weekly with our mentor during Wednesday lecture time and post a short async update in the team chat twice a week.
 - Every change goes through a pull request with one reviewer.
 - A checkpoint branch is frozen the evening before each deadline so we can test the deployed version together.
+- At every development stage, we test the current user-facing slice with representative users, record what we learn, and use the highest-priority findings to plan the next stage. We also conduct a final end-to-end user test after the last fixes and before the final demo.
 
 ## 3. Key Risks and Mitigations
 
