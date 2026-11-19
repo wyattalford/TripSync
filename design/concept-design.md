@@ -201,11 +201,10 @@ queries
 ```text
 concept AvailabilitySharing
 
-purpose communicate when invitations for a particular purpose are welcome
-  to selected audiences
+purpose communicate free time to selected audiences
 
-principle a user creates a dated opening, gives it a purpose, and publishes it
-  to select audiences that may use it. The user can revise or withdraw
+principle a user creates a dated free-time opening and publishes it
+  to selected audiences that may use it. The user can revise or withdraw
   that opening. One record serves all selected audiences, and an opening
   stops contributing after its end time. Sharing an opening does not
   commit its owner to a particular invitation.
@@ -217,23 +216,22 @@ types
 state
   a set of Openings with
     an owner User
-    a purpose String
     a start DateTime
     an end DateTime
     an audiences set of Audience
 
-  Rule: Each opening has start before end and a nonblank purpose.
+  Rule: Each opening has start before end.
     Openings belonging to the same owner must not overlap.
     Openings belonging to different owners may overlap.
 
 actions
-  create (owner: User, purpose: String, start: DateTime, end: DateTime)
+  create (owner: User, start: DateTime, end: DateTime)
     : return (opening: Opening)
-    where purpose is not blank, start is before end,
+    where start is before end,
       end is in the future,
       and no opening owned by owner overlaps [start, end)
     then
-      create opening with the supplied owner, purpose, start, and end,
+      create opening with the supplied owner, start, and end,
         and an empty audiences set
       return opening
 
@@ -244,15 +242,15 @@ actions
       set opening's audiences to the supplied audiences
       return
 
-  revise (user: User, opening: Opening, purpose: String,
-    start: DateTime, end: DateTime, audiences: set of Audience)
+  revise (user: User, opening: Opening, start: DateTime,
+    end: DateTime, audiences: set of Audience)
     : return ()
     where opening exists with owner user and has not ended,
-      purpose is not blank, start is before end, end is in the future,
+      start is before end, end is in the future,
       no other opening owned by user overlaps [start, end),
       and at least one supplied value differs from its recorded value
     then
-      set opening's purpose, start, end, and audiences to the supplied values
+      set opening's start, end, and audiences to the supplied values
       return
 
   withdraw (user: User, opening: Opening) : return ()
@@ -262,15 +260,14 @@ actions
       return
 
 queries
-  _owned (user: User) : many (opening: Opening, purpose: String,
-    start: DateTime, end: DateTime, audiences: set of Audience)
+  _owned (user: User) : many (opening: Opening, start: DateTime,
+    end: DateTime, audiences: set of Audience)
     Returns user's openings, including ended openings, ordered by start
       and then end. Ties have unspecified order; no rows if absent.
 
-  _sharedWith (audience: Audience, purpose: String,
-    from: DateTime, to: DateTime)
+  _sharedWith (audience: Audience, from: DateTime, to: DateTime)
     : many (owner: User, start: DateTime, end: DateTime)
-    Returns intervals of openings that include audience, match purpose,
+    Returns intervals of openings that include audience,
       have not ended, and intersect [from, to). Each interval is clipped
       to that range and the current time. Returns no rows for an empty
       or reversed range. Row order is unspecified.
@@ -278,16 +275,16 @@ queries
   _ownedSnapshot (user: User) : one (openings: set of OpeningDetails)
     Returns the same owner-only details in one record for the editor.
 
-  _sharedSnapshot (audience: Audience, purpose: String,
-    from: DateTime, to: DateTime, now: DateTime)
+  _sharedSnapshot (audience: Audience, from: DateTime,
+    to: DateTime, now: DateTime)
     : one (intervals: set of SharedInterval)
     Returns the same clipped intervals in one internal record using the
     request's time instant. It is never a public endpoint.
 ```
 
-**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old willingness is not assumed to continue. Purpose is free text, trimmed when saved and searched, and matched exactly with case preserved. Search duration is measured in minutes. Openings belonging to one owner cannot overlap even when their purposes differ. The implementation stores one owner's openings together and checks a revision on every update to enforce this rule under concurrent writes. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
+**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old availability is not assumed to continue. Openings are purpose-free; the purpose is set when proposing a gathering. The UI can select all current groups or a subset for one opening. Groups joined later are not automatically added. Search duration is measured in minutes. Openings belonging to one owner cannot overlap regardless of the intended gathering. The implementation stores one owner's openings together and checks a revision on every update to enforce this rule under concurrent writes. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
 
-All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner and matching the same purpose are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
+All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
 
 ## Gathering
 
@@ -608,11 +605,11 @@ then
 
 ```text
 when
-  Requesting.createOpening(session, purpose, start, end)
+  Requesting.createOpening(session, start, end)
   and Authenticating.authenticate(session) returns user
     within that request's flow
 then
-  AvailabilitySharing.create(user, purpose, start, end)
+  AvailabilitySharing.create(user, start, end)
 ```
 
 **Notes.** Users can only create openings for themselves. Openings cannot overlap with existing ones. Upon creation, openings are not shared with anyone.
@@ -637,7 +634,7 @@ then
 
 ```text
 when
-  Requesting.findOverlap(session, group, purpose, from, to, duration)
+  Requesting.findOverlap(session, group, from, to, duration)
   and Authenticating.authenticate(session) returns user
     within that request's flow
 where
@@ -748,7 +745,7 @@ where
   AvailabilitySharing._owned(user) returns own openings
   reviewNeeded is true exactly when gathering is CONFIRMED,
     has not started, user is in attendees, and the union of user's
-    current openings matching purpose does not cover [start, end)
+    current free-time openings do not cover [start, end)
 then
   respond to that requester with the gathering details, responses,
     and their own reviewNeeded flag

@@ -52,11 +52,11 @@ describe("OpenTime gathering boundary", () => {
     expect((await api(post("/groups/members", { group }, outsider.cookie))).status).toBe(403);
     const start = at(2), end = at(5);
     for (const member of [john, walker, eli, noah]) {
-      const created = await api(post("/openings/create", { purpose: "movie", start, end }, member.cookie));
+      const created = await api(post("/openings/create", { start, end }, member.cookie));
       const { opening } = await created.json() as { opening: string };
       await api(post("/openings/publish", { opening, audiences: [group] }, member.cookie));
     }
-    const overlapSearch = { group, purpose: "movie", from: start, to: end, duration: 60 };
+    const overlapSearch = { group, from: start, to: end, duration: 60 };
     expect((await (await api(post("/openings/overlap", overlapSearch, john.cookie))).json() as { overlaps: unknown[] }).overlaps).toHaveLength(1);
     const proposed = await api(post("/gatherings/propose", { group, invitees: [walker.user, eli.user, noah.user], purpose: "movie", activity: "Star Wars", place: "Dorm lounge", start, end }, john.cookie));
     expect(proposed.status).toBe(200);

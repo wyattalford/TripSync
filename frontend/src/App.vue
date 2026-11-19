@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "./api.ts";
 
 type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
-type Opening = { opening: string; purpose: string; start: string; end: string; audiences: string[] };
+type Opening = { opening: string; start: string; end: string; audiences: string[] };
 type Interval = { start: string; end: string };
 type PartialSuggestion = Interval & { availableCount: number; totalCount: number; unavailable: { user: string; username: string }[] };
 type Member = { user: string; username: string };
@@ -18,12 +18,12 @@ const currentUser = ref("");
 const groups = ref<GroupSummary[]>([]);
 const openings = ref<Opening[]>([]);
 const openingId = ref("");
-const openingPurpose = ref("");
 const openingStart = ref("");
 const openingEnd = ref("");
 const openingAudiences = ref<string[]>([]);
+const shareableGroups = computed(() => groups.value.filter((group) => group.membership === "MEMBER"));
+const allOpeningGroupsSelected = computed(() => shareableGroups.value.length > 0 && shareableGroups.value.every((group) => openingAudiences.value.includes(group.group)));
 const searchGroup = ref("");
-const searchPurpose = ref("");
 const searchFrom = ref("");
 const searchTo = ref("");
 const searchDuration = ref(60);
@@ -84,7 +84,7 @@ function openingError(error: string): string {
   if (error === "UNAUTHORIZED") return "Your session ended. Sign in again.";
   if (error === "FORBIDDEN") return "You can only change your own opening and share it with groups you belong to.";
   if (error === "CONFLICT") return "Your openings cannot overlap. Change one of the time ranges.";
-  if (error === "INVALID_REQUEST") return "Enter a purpose and a valid time range that has not ended.";
+  if (error === "INVALID_REQUEST") return "Enter a valid time range that has not ended.";
   if (error === "INTERNAL_ERROR") return "Could not read a consistent group snapshot. Please retry the search.";
   return "OpenTime could not complete that request. Try again.";
 }
@@ -140,7 +140,7 @@ async function refreshGatherings() {
 
 function proposeFromOverlap(interval: Interval) {
   proposalGroup.value = searchGroup.value;
-  proposalPurpose.value = searchPurpose.value.trim();
+  proposalPurpose.value = "";
   proposalStart.value = localInput(interval.start);
   proposalEnd.value = localInput(interval.end);
   document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
@@ -310,7 +310,6 @@ async function refreshOpenings() {
 
 function resetOpeningForm() {
   openingId.value = "";
-  openingPurpose.value = "";
   openingStart.value = "";
   openingEnd.value = "";
   openingAudiences.value = [];
@@ -318,28 +317,26 @@ function resetOpeningForm() {
 
 function editOpening(opening: Opening) {
   openingId.value = opening.opening;
-  openingPurpose.value = opening.purpose;
   openingStart.value = localInput(opening.start);
   openingEnd.value = localInput(opening.end);
-  openingAudiences.value = [...opening.audiences];
+  openingAudiences.value = opening.audiences.filter((id) => shareableGroups.value.some((group) => group.group === id));
   document.getElementById("opening-form")?.scrollIntoView({ behavior: "smooth" });
 }
 
 async function saveOpening() {
   const start = absoluteTime(openingStart.value);
   const end = absoluteTime(openingEnd.value);
-  const purpose = openingPurpose.value.trim();
-  if (!purpose || !start || !end || start >= end || new Date(end) <= new Date()) {
-    return showMessage("Enter a purpose and a valid time range that has not ended.", "error");
+  if (!start || !end || start >= end || new Date(end) <= new Date()) {
+    return showMessage("Enter a valid time range that has not ended.", "error");
   }
   busy.value = true;
   try {
     if (openingId.value) {
-      const result = await api.openings.revise({ opening: openingId.value, purpose, start, end, audiences: openingAudiences.value });
+      const result = await api.openings.revise({ opening: openingId.value, start, end, audiences: openingAudiences.value });
       if ("error" in result) return showMessage(openingError(result.error), "error");
       showMessage("Opening updated.", "success");
     } else {
-      const created = await api.openings.create({ purpose, start, end });
+      const created = await api.openings.create({ start, end });
       if ("error" in created) return showMessage(openingError(created.error), "error");
       if (openingAudiences.value.length > 0) {
         const shared = await api.openings.publish({ opening: created.opening, audiences: openingAudiences.value });
@@ -375,17 +372,17 @@ async function withdrawOpening(opening: string) {
 async function findOverlap() {
   const from = absoluteTime(searchFrom.value);
   const to = absoluteTime(searchTo.value);
-  if (!searchGroup.value || !searchPurpose.value.trim() || !from || !to || from >= to || !Number.isFinite(searchDuration.value) || searchDuration.value <= 0) {
-    return showMessage("Choose a group, purpose, valid range, and positive duration.", "error");
+  if (!searchGroup.value || !from || !to || from >= to || !Number.isFinite(searchDuration.value) || searchDuration.value <= 0) {
+    return showMessage("Choose a group, valid range, and positive duration.", "error");
   }
   busy.value = true;
   try {
-    const result = await api.openings.overlap({ group: searchGroup.value, purpose: searchPurpose.value.trim(), from, to, duration: searchDuration.value });
+    const result = await api.openings.overlap({ group: searchGroup.value, from, to, duration: searchDuration.value });
     if ("error" in result) return showMessage(openingError(result.error), "error");
     overlaps.value = result.overlaps;
     suggestions.value = result.suggestions;
     searched.value = true;
-    showMessage("Shared openings updated.", "success");
+    showMessage("Shared times updated.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
 }
@@ -575,14 +572,16 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
     <main class="content">
       <p class="eyebrow">Make time together</p>
       <h1>Find an opening. Make a plan.</h1>
-      <p class="intro">Share when an invitation would be welcome, find time your group has in common, and decide together whether to meet.</p>
+      <p class="intro">Share when you are free with chosen groups, find a time that works, and decide together whether to meet.</p>
 
       <p v-if="message" class="notice" :class="messageKind" role="status">{{ message }}</p>
       <p v-if="loading">Checking your account…</p>
       <section v-else-if="currentUsername" class="signed-in">
-        <h2>Welcome, {{ currentUsername }}</h2>
-        <button type="button" :disabled="busy" @click="signOut">Sign out</button>
-        <section class="status-panel inbox-panel">
+        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2><button type="button" class="secondary" :disabled="busy" @click="signOut">Sign out</button></div>
+        <nav class="task-nav" aria-label="OpenTime sections">
+          <a href="#groups">Groups</a><a href="#openings">Your free time</a><a href="#shared-time">Find shared time</a><a href="#gatherings">Gatherings</a><a href="#notices">Notices</a>
+        </nav>
+        <section class="status-panel inbox-panel" id="notices">
           <div class="group-heading"><h3>Your notices</h3><span>{{ notices.filter((item) => !item.readAt).length }} unread</span></div>
           <p v-if="notices.length === 0">No notices yet.</p>
           <ul v-else class="notice-list">
@@ -593,7 +592,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </li>
           </ul>
         </section>
-        <div class="group-layout">
+        <div class="group-layout" id="groups">
           <section class="status-panel">
             <h3>Your groups</h3>
             <p v-if="groups.length === 0">No groups yet. Create one or use an invitation link.</p>
@@ -646,24 +645,25 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </section>
           </div>
         </div>
-        <div class="opening-layout">
+        <div class="opening-layout" id="openings">
           <section class="status-panel" id="opening-form">
             <h3>{{ openingId ? "Revise your opening" : "Add an opening" }}</h3>
-            <p>Choose when an invitation for one purpose would be welcome. Only you can see the individual opening.</p>
+            <p>Add a time when you are free. You can use the same time with any groups you choose.</p>
             <form @submit.prevent="saveOpening">
-              <label for="opening-purpose">Purpose</label>
-              <input id="opening-purpose" v-model="openingPurpose" placeholder="e.g. watching a movie" :disabled="busy" required />
-              <p class="field-hint">Purpose matching uses the same words and capitalization.</p>
               <div class="time-fields">
                 <div><label for="opening-start">From</label><input id="opening-start" v-model="openingStart" type="datetime-local" :disabled="busy" required /></div>
                 <div><label for="opening-end">Until</label><input id="opening-end" v-model="openingEnd" type="datetime-local" :disabled="busy" required /></div>
               </div>
               <fieldset class="group-choices">
                 <legend>Share with groups</legend>
-                <p v-if="groups.every((group) => group.membership !== 'MEMBER')">Join a group to share this opening. You can save it privately now.</p>
-                <label v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" class="check-row">
+                <p v-if="shareableGroups.length === 0">Join a group to share this opening. You can save it privately now.</p>
+                <template v-else>
+                  <label class="check-row select-all-row"><input type="checkbox" :checked="allOpeningGroupsSelected" :disabled="busy" @change="openingAudiences = ($event.target as HTMLInputElement).checked ? shareableGroups.map((group) => group.group) : []" />Select all current groups</label>
+                </template>
+                <label v-for="group in shareableGroups" :key="group.group" class="check-row">
                   <input v-model="openingAudiences" type="checkbox" :value="group.group" :disabled="busy" />{{ group.name }}
                 </label>
+                <p v-if="shareableGroups.length" class="field-hint">Only selected groups can use this free time. New groups are not added automatically.</p>
               </fieldset>
               <div class="button-row">
                 <button type="submit" :disabled="busy">{{ openingId ? "Save changes" : "Save opening" }}</button>
@@ -676,7 +676,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             <p v-if="openings.length === 0">No openings yet. Add one to start finding time together.</p>
             <ul v-else class="opening-list">
               <li v-for="opening in openings" :key="opening.opening" class="opening-card">
-                <strong>{{ opening.purpose }}</strong>
+                <strong>Free time</strong>
                 <span>{{ localTime(opening.start) }} – {{ localTime(opening.end) }}</span>
                 <span>{{ opening.audiences.length ? `Shared with ${opening.audiences.length} group${opening.audiences.length === 1 ? '' : 's'}` : 'Private' }}</span>
                 <div class="button-row">
@@ -687,13 +687,12 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </ul>
           </section>
         </div>
-        <section class="status-panel overlap-panel">
+        <section class="status-panel overlap-panel" id="shared-time">
           <h3>Find shared time</h3>
-          <p>Search the current members of one group. If no time works for everyone, OpenTime shows the best times for the most members and names who has no usable time then.</p>
+          <p>Find free time shared with this group. If no time works for everyone, see when the most members are free.</p>
           <form @submit.prevent="findOverlap">
             <div class="search-fields">
               <div><label for="search-group">Group</label><select id="search-group" v-model="searchGroup" :disabled="busy" required><option value="" disabled>Choose a group</option><option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option></select></div>
-              <div><label for="search-purpose">Purpose</label><input id="search-purpose" v-model="searchPurpose" placeholder="e.g. watching a movie" :disabled="busy" required /></div>
               <div><label for="search-from">From</label><input id="search-from" v-model="searchFrom" type="datetime-local" :disabled="busy" required /></div>
               <div><label for="search-to">Until</label><input id="search-to" v-model="searchTo" type="datetime-local" :disabled="busy" required /></div>
               <div><label for="search-duration">At least (minutes)</label><input id="search-duration" v-model.number="searchDuration" type="number" min="1" step="1" :disabled="busy" required /></div>
@@ -716,7 +715,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </template>
           </div>
         </section>
-        <div class="gathering-layout">
+        <div class="gathering-layout" id="gatherings">
           <section class="status-panel" id="proposal-form">
             <h3>Propose a gathering</h3>
             <p>Choose current group members and specific details. A shared opening does not count as acceptance.</p>
@@ -748,7 +747,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             <p v-if="gatherings.length === 0">No proposals or confirmed gatherings yet.</p>
             <ul v-else class="gathering-list">
               <li v-for="gathering in gatherings" :id="`destination-${gathering.gathering}`" :key="gathering.gathering" class="gathering-card">
-                <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>Version {{ gathering.number }} · {{ gathering.status }}</span></div>
+                <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>Version {{ gathering.number }} · {{ gathering.status.toLowerCase() }}</span></div>
                 <p>{{ gathering.purpose }} · {{ gathering.place }}</p>
                 <p>{{ localTime(gathering.start) }} – {{ localTime(gathering.end) }}</p>
                 <p>Your response: {{ gathering.myResponse.toLowerCase() }}</p>

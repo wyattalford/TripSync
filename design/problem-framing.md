@@ -69,7 +69,7 @@ This account and the research above support the plausibility of these problems, 
 
 - **Group chats (WhatsApp, iMessage, Messenger):** Friends already use these channels to suggest activities and discuss plans, so they introduce little additional effort. However, availability and later changes can become scattered across messages. Someone must reconstruct the group's current preferences and follow up before a tentative idea becomes a confirmed gathering. OpenTime would give the group a shared record of current openings and accepted plans.
 
-- **Scheduling polls (When2meet, Doodle):** These tools collect availability and reveal overlapping times. When2meet participants can update their responses, and its days-of-the-week mode can represent recurring availability. However, responses remain associated with a particular poll. OpenTime would explore maintaining reusable, purpose-specific willingness across possible gatherings and groups, with changes reflected in the relevant overlaps. The proposed benefit is reducing repeated collection of similar information while keeping invitations and commitments distinct.
+- **Scheduling polls (When2meet, Doodle):** These tools collect availability and reveal overlapping times. When2meet participants can update their responses, and its days-of-the-week mode can represent recurring availability. However, responses remain associated with a particular poll. OpenTime explores maintaining reusable free time across possible gatherings and chosen groups, with changes reflected in the relevant overlaps. The proposed benefit is reducing repeated collection of similar information while keeping invitations and commitments distinct.
 
 - **Shared calendars (Google Calendar, Apple Calendar):** These make schedules visible, and Google Calendar can share free/busy information without revealing appointment details. However, a calendar gap still leaves uncertainty about whether someone would welcome an invitation. Our third bad situation illustrates this distinction: Walker's calendar exposes unscheduled time without communicating his intention to study or rest. OpenTime would use deliberately selected openings to identify shared willingness while keeping unrelated personal time and events private.
 
@@ -124,7 +124,7 @@ The initial version will focus on sharing openings, discovering overlaps, and co
     - **Prompt**: Visualize one lifestyle change that could be supported by your technology.
     - **Feature**: Adding open times
     - **Consequence**: Users may feel pressure to structure their personal time and anticipate invitations instead of deciding spontaneously.
-  - **Design Response**: Let users revise or withdraw purpose-specific openings as their preferences change. An opening communicates willingness to receive an invitation, while attendance requires explicit acceptance of a particular gathering. Different levels of willingness remain a stretch goal, so the initial version does not require users to classify how strongly they want to socialize.
+  - **Design Response**: Let users revise or withdraw free-time openings as their schedule changes. An opening indicates time that may be used for coordination, while the purpose is chosen in a gathering proposal and attendance requires explicit acceptance. Different levels of willingness remain a stretch goal, so the initial version does not require users to classify how strongly they want to socialize.
 
 4. **Insight 4**
   - **Observation**:

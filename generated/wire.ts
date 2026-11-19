@@ -319,7 +319,6 @@ export type OpenTimeWire = {
   "/openings/create": {
     input: {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["purpose"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["start"]>>;
     };
@@ -342,7 +341,6 @@ export type OpenTimeWire = {
       "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["duration"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["from"]>>;
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["group"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["purpose"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
       "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["to"]>>;
     };
@@ -368,7 +366,6 @@ export type OpenTimeWire = {
       "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["end"]>>;
       "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["opening"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["purpose"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["start"]>>;
     };
@@ -664,7 +661,6 @@ export type OpenTimeWireHttp = {
   "/openings/create": {
     input: {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["purpose"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["start"]>>;
     };
     output: {
@@ -684,7 +680,6 @@ export type OpenTimeWireHttp = {
       "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["duration"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["from"]>>;
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["group"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["purpose"]>>;
       "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["to"]>>;
     };
     output: {
@@ -708,7 +703,6 @@ export type OpenTimeWireHttp = {
       "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["end"]>>;
       "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["opening"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["purpose"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["start"]>>;
     };
     output: {

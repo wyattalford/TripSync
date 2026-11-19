@@ -41,7 +41,7 @@ describe("OpenTime opening boundary", () => {
   beforeEach(resetTestDatabase);
   afterAll(async () => { await resetTestDatabase(); await client.close(); });
 
-  test("keeps openings private and returns only full-group, purpose-matched intervals", async () => {
+  test("keeps openings private and returns only full-group intervals without a purpose", async () => {
     const api = handler();
     async function account(username: string) {
       expect((await api(post("/auth/register", { username, password: "safe password" }))).status).toBe(200);
@@ -57,10 +57,10 @@ describe("OpenTime opening boundary", () => {
     await api(post("/groups/invite", { group, username: "noah" }, john));
 
     const from = at(2), to = at(5);
-    const johnOpening = (await (await api(post("/openings/create", { purpose: "movie", start: from, end: to }, john))).json() as { opening: string }).opening;
-    const walkerOpening = (await (await api(post("/openings/create", { purpose: "movie", start: at(3), end: at(5) }, walker))).json() as { opening: string }).opening;
+    const johnOpening = (await (await api(post("/openings/create", { start: from, end: to }, john))).json() as { opening: string }).opening;
+    const walkerOpening = (await (await api(post("/openings/create", { start: at(3), end: at(5) }, walker))).json() as { opening: string }).opening;
     expect((await api(post("/openings/publish", { opening: johnOpening, audiences: [group] }, john))).status).toBe(200);
-    const search = { group, purpose: "movie", from, to, duration: 60 };
+    const search = { group, from, to, duration: 60 };
     expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [], suggestions: [] });
     expect((await api(post("/openings/publish", { opening: walkerOpening, audiences: [group] }, walker))).status).toBe(200);
     const result = await api(post("/openings/overlap", search, john));
@@ -70,13 +70,13 @@ describe("OpenTime opening boundary", () => {
     expect(new Date(overlap.overlaps[0]!.start).getTime()).toBeGreaterThanOrEqual(new Date(at(3)).getTime() - 5_000);
     expect(overlap.overlaps[0]!.end).toBe(to);
     expect(JSON.stringify(overlap)).not.toContain("owner");
-    expect(await (await api(post("/openings/overlap", { ...search, purpose: "Movie" }, john))).json()).toEqual({ overlaps: [], suggestions: [] });
+    expect(JSON.stringify(await (await api(post("/openings/mine", {}, walker))).json())).not.toContain("purpose");
     expect((await api(post("/openings/overlap", search, noah))).status).toBe(403);
     const mine = await api(post("/openings/mine", {}, walker));
     expect((await mine.json() as { openings: { opening: string }[] }).openings.map((item) => item.opening)).toEqual([walkerOpening]);
     expect((await api(post("/openings/withdraw", { opening: johnOpening }, walker))).status).toBe(403);
     expect((await api(post("/openings/publish", { opening: johnOpening, audiences: [group] }, noah))).status).toBe(403);
-    expect((await api(post("/openings/revise", { opening: walkerOpening, purpose: "studying", start: at(3), end: to, audiences: [group] }, walker))).status).toBe(200);
+    expect((await api(post("/openings/revise", { opening: walkerOpening, start: at(3), end: to, audiences: [] }, walker))).status).toBe(200);
     expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [], suggestions: [] });
     expect((await api(post("/openings/withdraw", { opening: walkerOpening }, walker))).status).toBe(200);
     expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [], suggestions: [] });
@@ -86,21 +86,21 @@ describe("OpenTime opening boundary", () => {
 
   test("serializes concurrent writes and updates overlaps after revision or withdrawal", async () => {
     const concept = new AvailabilitySharingConcept(db);
-    const first = { owner: "user-1", purpose: "movie", start: at(2), end: at(4) };
-    const second = { owner: "user-1", purpose: "dinner", start: at(3), end: at(5) };
+    const first = { owner: "user-1", start: at(2), end: at(4) };
+    const second = { owner: "user-1", start: at(3), end: at(5) };
     const attempts = await Promise.allSettled([concept.create(first), concept.create(second)]);
     expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
     expect(attempts.filter((attempt) => attempt.status === "rejected" && attempt.reason instanceof OpeningConflict)).toHaveLength(1);
     const owned = await concept._owned({ user: "user-1" });
     expect(owned).toHaveLength(1);
     const original = owned[0]!;
-    await expect(concept.revise({ user: "user-1", opening: original.opening, purpose: original.purpose, start: original.start, end: original.end, audiences: [] })).rejects.toThrow();
+    await expect(concept.revise({ user: "user-1", opening: original.opening, start: original.start, end: original.end, audiences: [] })).rejects.toThrow();
     const newEnd = at(6);
-    await concept.revise({ user: "user-1", opening: original.opening, purpose: original.purpose, start: original.start, end: newEnd, audiences: [] });
+    await concept.revise({ user: "user-1", opening: original.opening, start: original.start, end: newEnd, audiences: [] });
     expect((await concept._owned({ user: "user-1" }))[0]!.end).toBe(newEnd);
     await concept.withdraw({ user: "user-1", opening: original.opening });
     expect(await concept._owned({ user: "user-1" })).toEqual([]);
-    await expect(concept.create({ owner: "user-1", purpose: "movie", start: at(-3), end: at(-1) })).rejects.toThrow();
+    await expect(concept.create({ owner: "user-1", start: at(-3), end: at(-1) })).rejects.toThrow();
   });
 
   test("returns the largest partial group only when no full-group time exists", async () => {
@@ -119,15 +119,15 @@ describe("OpenTime opening boundary", () => {
     const from = at(3), to = at(5);
     const openings = new AvailabilitySharingConcept(db);
     for (const member of [john, walker]) {
-      const { opening } = await openings.create({ owner: member.user, purpose: "movie", start: from, end: to });
+      const { opening } = await openings.create({ owner: member.user, start: from, end: to });
       await openings.publish({ user: member.user, opening, audiences: [group] });
     }
-    const search = { group, purpose: "movie", from, to, duration: 60 };
+    const search = { group, from, to, duration: 60 };
     const partial = await (await api(post("/openings/overlap", search, john.cookie))).json() as { overlaps: unknown[]; suggestions: { availableCount: number; totalCount: number; unavailable: { username: string }[] }[] };
     expect(partial.overlaps).toEqual([]);
     expect(partial.suggestions).toHaveLength(1);
     expect(partial.suggestions[0]).toMatchObject({ availableCount: 2, totalCount: 3, unavailable: [{ username: "eli" }] });
-    const { opening } = await openings.create({ owner: eli.user, purpose: "movie", start: from, end: to });
+    const { opening } = await openings.create({ owner: eli.user, start: from, end: to });
     await openings.publish({ user: eli.user, opening, audiences: [group] });
     const full = await (await api(post("/openings/overlap", search, john.cookie))).json() as { overlaps: unknown[]; suggestions: unknown[] };
     expect(full.overlaps).toHaveLength(1);

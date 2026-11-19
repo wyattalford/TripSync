@@ -5,7 +5,7 @@ import { readSharedIntervals } from "./concepts/AvailabilitySharing.ts";
 import { readConfirmedCommitments } from "./concepts/Gathering.ts";
 import { bestPartialGroupTimes, fullGroupOverlaps } from "./overlap.ts";
 
-type Search = { user: string; group: string; purpose: string; from: string; to: string; duration: number; now: Date };
+type Search = { user: string; group: string; from: string; to: string; duration: number; now: Date };
 
 export async function readOverlapSnapshot(db: Db, input: Search, afterMembershipRead?: () => Promise<void>) {
   const session = db.client.startSession({ causalConsistency: false });
@@ -16,7 +16,7 @@ export async function readOverlapSnapshot(db: Db, input: Search, afterMembership
         start: string; end: string; availableCount: number; totalCount: number; unavailable: { user: string; username: string }[];
       }[] };
       if (afterMembershipRead) await afterMembershipRead();
-      const intervals = await readSharedIntervals(db, input.group, input.purpose, input.from, input.to, input.now, session);
+      const intervals = await readSharedIntervals(db, input.group, input.from, input.to, input.now, session);
       const commitments = await readConfirmedCommitments(db, members, input.from, input.to, input.now, session);
       const overlaps = fullGroupOverlaps({ members, openings: intervals, commitments, from: input.from, to: input.to, now: input.now, durationMinutes: input.duration });
       if (overlaps.length) return { allowed: true, overlaps, suggestions: [] };

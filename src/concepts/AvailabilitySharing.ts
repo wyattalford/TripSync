@@ -7,7 +7,6 @@ export class OpeningForbidden extends Error {}
 
 type Opening = {
   opening: string;
-  purpose: string;
   start: Date;
   end: Date;
   audiences: string[];
@@ -57,20 +56,19 @@ function ownedOpening(openings: Opening[], opening: string): Opening {
   return found;
 }
 
-async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, purpose: string, from: string, to: string, now: Date, session?: ClientSession) {
-  const matchingPurpose = purpose.trim();
+async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, from: string, to: string, now: Date, session?: ClientSession) {
   const lower = Math.max(instant(from)?.getTime() ?? Number.NaN, now.getTime());
   const upper = instant(to)?.getTime() ?? Number.NaN;
   if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) return [];
   const found = await owners.find({ "openings.audiences": audience }, { session }).toArray();
-  return found.flatMap((owner) => owner.openings.filter((opening) => opening.purpose === matchingPurpose && opening.audiences.includes(audience))
+  return found.flatMap((owner) => owner.openings.filter((opening) => opening.audiences.includes(audience))
     .map((opening) => ({ owner: owner._id, start: Math.max(opening.start.getTime(), lower), end: Math.min(opening.end.getTime(), upper) }))
     .filter(({ start, end }) => start < end)
     .map(({ owner: member, start, end }) => ({ owner: member, start: new Date(start).toISOString(), end: new Date(end).toISOString() })));
 }
 
-export function readSharedIntervals(db: Db, audience: string, purpose: string, from: string, to: string, now: Date, session?: ClientSession) {
-  return sharedIntervals(db.collection<OwnerDocument>("availabilitySharing.owners"), audience, purpose, from, to, now, session);
+export function readSharedIntervals(db: Db, audience: string, from: string, to: string, now: Date, session?: ClientSession) {
+  return sharedIntervals(db.collection<OwnerDocument>("availabilitySharing.owners"), audience, from, to, now, session);
 }
 
 export class AvailabilitySharingConcept {
@@ -80,19 +78,18 @@ export class AvailabilitySharingConcept {
     this.owners = db.collection<OwnerDocument>("availabilitySharing.owners");
   }
 
-  async create({ owner, purpose, start, end }: { owner: string; purpose: string; start: string; end: string }) {
+  async create({ owner, start, end }: { owner: string; start: string; end: string }) {
     const parsedStart = instant(start);
     const parsedEnd = instant(end);
-    const cleanedPurpose = purpose.trim();
-    if (!cleanedPurpose || !parsedStart || !parsedEnd || parsedStart >= parsedEnd || parsedEnd <= this.clock()) {
-      throw new InvalidOpening("Enter a purpose and a valid future-ending time range.");
+    if (!parsedStart || !parsedEnd || parsedStart >= parsedEnd || parsedEnd <= this.clock()) {
+      throw new InvalidOpening("Enter a valid future-ending time range.");
     }
     const opening = crypto.randomUUID();
     await changeOwner(this.owners, owner, (existing) => {
       if (existing.some((item) => overlaps(item, { start: parsedStart, end: parsedEnd }))) {
         throw new OpeningConflict("Your openings cannot overlap.");
       }
-      return [...existing, { opening, purpose: cleanedPurpose, start: parsedStart, end: parsedEnd, audiences: [] }];
+      return [...existing, { opening, start: parsedStart, end: parsedEnd, audiences: [] }];
     }, true);
     return { opening };
   }
@@ -106,17 +103,16 @@ export class AvailabilitySharingConcept {
     return {};
   }
 
-  async revise({ user, opening, purpose, start, end, audiences }: { user: string; opening: string; purpose: string; start: string; end: string; audiences: string[] }) {
+  async revise({ user, opening, start, end, audiences }: { user: string; opening: string; start: string; end: string; audiences: string[] }) {
     const parsedStart = instant(start);
     const parsedEnd = instant(end);
-    const cleanedPurpose = purpose.trim();
     const selected = [...new Set(audiences)];
     await changeOwner(this.owners, user, (existing) => {
       const previous = ownedOpening(existing, opening);
-      if (!cleanedPurpose || !parsedStart || !parsedEnd || parsedStart >= parsedEnd || parsedEnd <= this.clock() || previous.end <= this.clock()) {
+      if (!parsedStart || !parsedEnd || parsedStart >= parsedEnd || parsedEnd <= this.clock() || previous.end <= this.clock()) {
         throw new InvalidOpening("Change at least one detail of an active opening to a valid interval.");
       }
-      const changed = cleanedPurpose !== previous.purpose || parsedStart.getTime() !== previous.start.getTime()
+      const changed = parsedStart.getTime() !== previous.start.getTime()
         || parsedEnd.getTime() !== previous.end.getTime()
         || selected.length !== previous.audiences.length || selected.some((audience) => !previous.audiences.includes(audience));
       if (!changed) throw new InvalidOpening("Change at least one detail of an active opening to a valid interval.");
@@ -124,7 +120,7 @@ export class AvailabilitySharingConcept {
         throw new OpeningConflict("Your openings cannot overlap.");
       }
       return existing.map((item) => item.opening === opening
-        ? { opening, purpose: cleanedPurpose, start: parsedStart, end: parsedEnd, audiences: selected }
+        ? { opening, start: parsedStart, end: parsedEnd, audiences: selected }
         : item);
     });
     return {};
@@ -141,25 +137,25 @@ export class AvailabilitySharingConcept {
   async _owned({ user }: { user: string }) {
     const current = await this.owners.findOne({ _id: user });
     return (current?.openings ?? []).map((item) => ({
-      opening: item.opening, purpose: item.purpose, start: item.start.toISOString(), end: item.end.toISOString(), audiences: item.audiences,
+      opening: item.opening, start: item.start.toISOString(), end: item.end.toISOString(), audiences: item.audiences,
     })).sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
   }
 
-  async _sharedWith({ audience, purpose, from, to }: { audience: string; purpose: string; from: string; to: string }) {
-    return sharedIntervals(this.owners, audience, purpose, from, to, this.clock());
+  async _sharedWith({ audience, from, to }: { audience: string; from: string; to: string }) {
+    return sharedIntervals(this.owners, audience, from, to, this.clock());
   }
 
-  async _sharedSnapshot({ audience, purpose, from, to, now }: { audience: string; purpose: string; from: string; to: string; now: Date }) {
-    return { intervals: await sharedIntervals(this.owners, audience, purpose, from, to, now) };
+  async _sharedSnapshot({ audience, from, to, now }: { audience: string; from: string; to: string; now: Date }) {
+    return { intervals: await sharedIntervals(this.owners, audience, from, to, now) };
   }
 
   async _ownedSnapshot({ user }: { user: string }) {
     return { openings: await this._owned({ user }) };
   }
 
-  async _overlapSnapshot({ user, group, purpose, from, to, duration, now }: {
-    user: string; group: string; purpose: string; from: string; to: string; duration: number; now: Date;
+  async _overlapSnapshot({ user, group, from, to, duration, now }: {
+    user: string; group: string; from: string; to: string; duration: number; now: Date;
   }) {
-    return readOverlapSnapshot(this.db, { user, group, purpose, from, to, duration, now });
+    return readOverlapSnapshot(this.db, { user, group, from, to, duration, now });
   }
 }

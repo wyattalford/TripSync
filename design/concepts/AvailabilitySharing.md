@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Communicate when invitations for a particular purpose are welcome to selected audiences.
+Communicate when a user is free to selected audiences.
 
 ## Principle
 
-A user creates a dated opening, gives it a purpose, and publishes it to selected audiences. One opening serves every selected audience. The owner can revise or withdraw it. An opening does not commit its owner to a gathering and stops contributing after its end time.
+A user creates a dated free-time opening and publishes it to selected audiences. They can choose every current group or select particular groups. One opening serves every selected audience. The owner can revise or withdraw it. An opening does not commit its owner to a gathering and stops contributing after its end time.
 
 ## Types
 
@@ -30,22 +30,21 @@ opaque PartialSuggestions
 ```state
 a set of Openings with
   an owner User
-  a purpose String
   a start DateTime
   an end DateTime
   an audiences Audiences
 
-Rule: Each opening has a nonblank purpose and start before end.
-Rule: An owner's openings do not overlap, including across purposes.
+Rule: Each opening has start before end.
+Rule: An owner's openings do not overlap.
 ```
 
 ## Actions
 
 ```actions
-create(owner: User, purpose: String, start: DateTime, end: DateTime) : returns (opening: Opening)
-  where purpose is blank, the interval is invalid, or end is not in the future
+create(owner: User, start: DateTime, end: DateTime) : returns (opening: Opening)
+  where the interval is invalid or end is not in the future
   then
-    refuses INVALID_OPENING "Enter a purpose and a valid future-ending time range."
+    refuses INVALID_OPENING "Enter a valid future-ending time range."
   where another opening owned by owner overlaps the interval
   then
     refuses OPENING_CONFLICT "Your openings cannot overlap."
@@ -63,7 +62,7 @@ publish(user: User, opening: Opening, audiences: Audiences) : returns ()
     replace the opening's audience set
     returns
 
-revise(user: User, opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences) : returns ()
+revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: Audiences) : returns ()
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -75,7 +74,7 @@ revise(user: User, opening: Opening, purpose: String, start: DateTime, end: Date
     refuses OPENING_CONFLICT "Your openings cannot overlap."
   where the replacement is valid and does not overlap another opening
   then
-    replace purpose, interval, and audience set
+    replace interval and audience set
     returns
 
 withdraw(user: User, opening: Opening) : returns ()
@@ -91,16 +90,16 @@ withdraw(user: User, opening: Opening) : returns ()
 ## Queries
 
 ```queries
-_owned(user: User) : many (opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences)
+_owned(user: User) : many (opening: Opening, start: DateTime, end: DateTime, audiences: Audiences)
   Returns the user's openings, including ended openings, ordered by start then end.
 
-_sharedWith(audience: Audience, purpose: String, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)
-  Returns matching, still-current intervals clipped to the search range and current time. No rows for an empty range.
+_sharedWith(audience: Audience, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)
+  Returns still-current intervals clipped to the search range and current time. No rows for an empty range.
 
-_sharedSnapshot(audience: Audience, purpose: String, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)
+_sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)
   Returns the same intervals as one internal snapshot for server-side overlap calculation. Never exposed as a public endpoint.
 
-_overlapSnapshot(user: User, group: Audience, purpose: String, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)
+_overlapSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)
   Uses the internal read coordinator to combine membership, openings, and commitments from one MongoDB snapshot. Returns full-group overlaps when present; otherwise the best partial-group suggestions. No rows of individual openings are exposed.
 
 _ownedSnapshot(user: User) : one (openings: OwnedOpenings)

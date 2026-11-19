@@ -8,11 +8,11 @@ const options = { validators: { input: validateOpeningRequest } };
 
 const Create = endpoint(
   "/openings/create",
-  ({ session, purpose, start, end, user, opening }) => receive({ session, purpose, start, end })
+  ({ session, start, end, user, opening }) => receive({ session, start, end })
     .then(Authenticating.authenticate({ session }).responds({ user }))
-    .then(AvailabilitySharing.create({ owner: user, purpose, start, end }).responds({ opening }))
+    .then(AvailabilitySharing.create({ owner: user, start, end }).responds({ opening }))
     .then(respond({ opening })),
-  { ...options, input: { required: ["session", "purpose", "start", "end"] } },
+  { ...options, input: { required: ["session", "start", "end"] } },
 );
 
 const Publish = endpoint(
@@ -31,16 +31,16 @@ const Publish = endpoint(
 
 const Revise = endpoint(
   "/openings/revise",
-  ({ session, opening, purpose, start, end, audiences, user }) => receive({ session, opening, purpose, start, end, audiences })
+  ({ session, opening, start, end, audiences, user }) => receive({ session, opening, start, end, audiences })
     .then(Authenticating.authenticate({ session }).responds({ user }))
     .then(
       where(Grouping._canShareWith({ user, groups: audiences }).is({ allowed: true }))
-        .then(AvailabilitySharing.revise({ user, opening, purpose, start, end, audiences }).responds({}))
+        .then(AvailabilitySharing.revise({ user, opening, start, end, audiences }).responds({}))
         .then(respond({ revised: true })).named("allowed"),
       where(Grouping._canShareWith({ user, groups: audiences }).is({ allowed: false }))
         .then(respond({ error: "GROUP_FORBIDDEN" })).named("not-member"),
     ),
-  { ...options, input: { required: ["session", "opening", "purpose", "start", "end", "audiences"] } },
+  { ...options, input: { required: ["session", "opening", "start", "end", "audiences"] } },
 );
 
 const Withdraw = endpoint(
@@ -62,17 +62,17 @@ const Mine = endpoint(
 
 const FindOverlap = endpoint(
   "/openings/overlap",
-  ({ session, group, purpose, from, to, duration, user, instant, overlaps, suggestions }) => receive({ session, group, purpose, from, to, duration })
+  ({ session, group, from, to, duration, user, instant, overlaps, suggestions }) => receive({ session, group, from, to, duration })
     .then(Authenticating.authenticate({ session }).responds({ user }))
     .then(
       where(
         now(instant),
-        AvailabilitySharing._overlapSnapshot({ user, group, purpose, from, to, duration, now: instant }).is({ allowed: true, overlaps, suggestions }),
+        AvailabilitySharing._overlapSnapshot({ user, group, from, to, duration, now: instant }).is({ allowed: true, overlaps, suggestions }),
       ).then(respond({ overlaps, suggestions })).named("member"),
-      where(now(instant), AvailabilitySharing._overlapSnapshot({ user, group, purpose, from, to, duration, now: instant }).is({ allowed: false }))
+      where(now(instant), AvailabilitySharing._overlapSnapshot({ user, group, from, to, duration, now: instant }).is({ allowed: false }))
         .then(respond({ error: "GROUP_FORBIDDEN" })).named("not-member"),
     ),
-  { ...options, input: { required: ["session", "group", "purpose", "from", "to", "duration"] } },
+  { ...options, input: { required: ["session", "group", "from", "to", "duration"] } },
 );
 
 export const composition = { Create, Publish, Revise, Withdraw, Mine, FindOverlap };

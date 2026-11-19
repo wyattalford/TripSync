@@ -41,12 +41,12 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 
 #### Actions
 
-- `create(owner: User, purpose: String, start: DateTime, end: DateTime) : returns (opening: Opening)`
-  - Refuses `INVALID_OPENING`: Enter a purpose and a valid future-ending time range.
+- `create(owner: User, start: DateTime, end: DateTime) : returns (opening: Opening)`
+  - Refuses `INVALID_OPENING`: Enter a valid future-ending time range.
   - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
 - `publish(user: User, opening: Opening, audiences: Audiences) : returns ()`
   - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
-- `revise(user: User, opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences) : returns ()`
+- `revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: Audiences) : returns ()`
   - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
   - Refuses `INVALID_OPENING`: Change at least one detail of an active opening to a valid interval.
   - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
@@ -55,10 +55,10 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 
 #### Queries
 
-- `_owned(user: User) : many (opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences)`
-- `_sharedWith(audience: Audience, purpose: String, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)`
-- `_sharedSnapshot(audience: Audience, purpose: String, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)`
-- `_overlapSnapshot(user: User, group: Audience, purpose: String, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)`
+- `_owned(user: User) : many (opening: Opening, start: DateTime, end: DateTime, audiences: Audiences)`
+- `_sharedWith(audience: Audience, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)`
+- `_sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)`
+- `_overlapSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)`
 - `_ownedSnapshot(user: User) : one (openings: OwnedOpenings)`
 
 #### Instances
@@ -1286,7 +1286,7 @@ Authored path: `OpenTime.Openings.Create`.
 - Covered by [Openings composition](../design/compositions/Openings.md), line 8.
 
 ```reaction
-when RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+when RequestBoundary.request (end, path: "/openings/create", requestId, session, start)
 then
   Authenticating.authenticate (session)
 ```
@@ -1300,9 +1300,9 @@ Authored path: `OpenTime.Openings.Create`.
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Create
 where
-  earlier, RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+  earlier, RequestBoundary.request (end, path: "/openings/create", requestId, session, start)
 then
-  AvailabilitySharing.create (end, owner: user, purpose, start)
+  AvailabilitySharing.create (end, owner: user, start)
 ```
 
 ### OpenTime.Openings.Create#3
@@ -1312,9 +1312,9 @@ Authored path: `OpenTime.Openings.Create`.
 - Covered by [Openings composition](../design/compositions/Openings.md), line 8.
 
 ```reaction
-when AvailabilitySharing.create (end, owner: user, purpose, start, opening), asked by OpenTime.Openings.Create#2
+when AvailabilitySharing.create (end, owner: user, start, opening), asked by OpenTime.Openings.Create#2
 where
-  earlier, RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+  earlier, RequestBoundary.request (end, path: "/openings/create", requestId, session, start)
 then
   RequestBoundary.respond (opening, requestId)
 ```
@@ -1326,7 +1326,7 @@ Authored path: `OpenTime.Openings.FindOverlap`.
 - Covered by [Openings composition](../design/compositions/Openings.md), line 13.
 
 ```reaction
-when RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
+when RequestBoundary.request (duration, from, group, path: "/openings/overlap", requestId, session, to)
 then
   Authenticating.authenticate (session)
 ```
@@ -1341,8 +1341,8 @@ Authored path: `OpenTime.Openings.FindOverlap`.
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.FindOverlap
 where
   instant is the current flow's instant
-  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
-  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, purpose, to, user) has (allowed: true, overlaps, suggestions)
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", requestId, session, to)
+  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, to, user) has (allowed: true, overlaps, suggestions)
 then
   RequestBoundary.respond (overlaps, requestId, suggestions)
 ```
@@ -1357,8 +1357,8 @@ Authored path: `OpenTime.Openings.FindOverlap`.
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.FindOverlap
 where
   instant is the current flow's instant
-  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
-  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, purpose, to, user) has (allowed: false)
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", requestId, session, to)
+  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, to, user) has (allowed: false)
 then
   RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
 ```
@@ -1453,7 +1453,7 @@ Authored path: `OpenTime.Openings.Revise`.
 - Covered by [Openings composition](../design/compositions/Openings.md), line 10.
 
 ```reaction
-when RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+when RequestBoundary.request (audiences, end, opening, path: "/openings/revise", requestId, session, start)
 then
   Authenticating.authenticate (session)
 ```
@@ -1467,10 +1467,10 @@ Authored path: `OpenTime.Openings.Revise`.
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Revise
 where
-  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", requestId, session, start)
   Grouping._canShareWith (groups: audiences, user) has (allowed: true)
 then
-  AvailabilitySharing.revise (audiences, end, opening, purpose, start, user)
+  AvailabilitySharing.revise (audiences, end, opening, start, user)
 ```
 
 ### OpenTime.Openings.Revise:allowed#3
@@ -1480,9 +1480,9 @@ Authored path: `OpenTime.Openings.Revise`.
 - Covered by [Openings composition](../design/compositions/Openings.md), line 10.
 
 ```reaction
-when AvailabilitySharing.revise (audiences, end, opening, purpose, start, user), asked by OpenTime.Openings.Revise:allowed#2
+when AvailabilitySharing.revise (audiences, end, opening, start, user), asked by OpenTime.Openings.Revise:allowed#2
 where
-  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", requestId, session, start)
 then
   RequestBoundary.respond (requestId, revised: true)
 ```
@@ -1496,7 +1496,7 @@ Authored path: `OpenTime.Openings.Revise`.
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Revise
 where
-  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", requestId, session, start)
   Grouping._canShareWith (groups: audiences, user) has (allowed: false)
 then
   RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
@@ -1576,9 +1576,9 @@ not listed here have no explicit input contract.
 - `/groups/remove` — requires `session`, `group`, `username`
 - `/notices/list` — requires `session`
 - `/notices/mark-read` — requires `session`, `notice`
-- `/openings/create` — requires `session`, `purpose`, `start`, `end`
+- `/openings/create` — requires `session`, `start`, `end`
 - `/openings/mine` — requires `session`
-- `/openings/overlap` — requires `session`, `group`, `purpose`, `from`, `to`, `duration`
+- `/openings/overlap` — requires `session`, `group`, `from`, `to`, `duration`
 - `/openings/publish` — requires `session`, `opening`, `audiences`
-- `/openings/revise` — requires `session`, `opening`, `purpose`, `start`, `end`, `audiences`
+- `/openings/revise` — requires `session`, `opening`, `start`, `end`, `audiences`
 - `/openings/withdraw` — requires `session`, `opening`

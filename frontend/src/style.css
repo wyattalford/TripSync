@@ -42,8 +42,13 @@ h1 { max-width: 14ch; margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); line-hei
 button { margin-top: 1rem; padding: .65rem 1rem; border: 0; border-radius: .4rem; background: #0d6055; color: #fff; cursor: pointer; }
 button:hover { background: #084c43; }
 button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
-.signed-in > h2 { margin: 0; }
-.signed-in > button { margin: .8rem 0 2rem; }
+.account-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+.account-heading h2 { margin: 0; font-size: 1.35rem; }
+.account-heading button { margin: 0; }
+.task-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.5rem; }
+.task-nav a { padding: .55rem .8rem; border-radius: .4rem; background: #e0eee9; color: #0d6055; font-weight: 700; text-decoration: none; }
+.task-nav a:hover { background: #cce3da; }
+.task-nav a:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .inbox-panel { max-width: none; margin-bottom: 1.25rem; }
 .notice-list { display: grid; gap: .6rem; padding: 0; margin: 1rem 0 0; list-style: none; }
 .notice-list li { padding: .75rem; border: 1px solid #d6dfdb; border-radius: .4rem; }
@@ -55,7 +60,7 @@ button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .group-actions { display: grid; gap: 1.25rem; }
 .group-actions .status-panel p { margin-bottom: 1rem; }
 .group-list { display: grid; gap: 1rem; padding: 0; margin: 1rem 0 0; list-style: none; }
-.group-card { padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; }
+.group-card { min-width: 0; padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .group-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; align-items: baseline; }
 .group-heading strong { font-size: 1.05rem; }
 .group-heading span { color: #526970; font-size: .9rem; }
@@ -75,9 +80,10 @@ button.secondary:hover { background: #cce3da; }
 .group-choices { min-width: 0; margin: 1rem 0 0; padding: .75rem; border: 1px solid #cbd9d4; border-radius: .4rem; }
 .group-choices legend { font-weight: 700; }
 .group-choices .check-row { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; font-weight: 400; }
+.group-choices .select-all-row { padding-bottom: .5rem; margin-bottom: .6rem; border-bottom: 1px solid #d6dfdb; font-weight: 700; }
 .group-choices input[type="checkbox"] { width: auto; }
 .opening-list { display: grid; gap: .75rem; padding: 0; margin: 1rem 0 0; list-style: none; }
-.opening-card { display: grid; gap: .4rem; padding: .9rem; border: 1px solid #d6dfdb; border-radius: .5rem; }
+.opening-card { display: grid; min-width: 0; gap: .4rem; padding: .9rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .opening-card span { color: #526970; }
 .opening-card .button-row button { margin-top: .4rem; }
 .overlap-panel { margin-top: 2rem; }
@@ -90,12 +96,13 @@ button.secondary:hover { background: #cce3da; }
 .gathering-layout .status-panel { max-width: none; }
 .gathering-layout .status-panel > p { margin-bottom: 1rem; }
 .gathering-list { display: grid; gap: .8rem; list-style: none; margin: 1rem 0; padding: 0; }
-.gathering-card { padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; }
+.gathering-card { min-width: 0; padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .gathering-card p { margin: .45rem 0; font-size: .92rem; }
 .gathering-card .button-row button { margin-top: .6rem; }
 .gathering-edit-panel { max-width: none; margin-top: 1.25rem; }
 .gathering-edit-panel > p { margin-bottom: 1rem; }
 .gathering-edit-panel .time-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .invite-extra { margin-top: .8rem; }
-@media (max-width: 48rem) { .group-layout { grid-template-columns: 1fr; } .content { padding-top: 2.5rem; } }
-@media (max-width: 42rem) { .opening-layout, .gathering-layout, .search-fields, .gathering-edit-panel .time-fields { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 56rem) { .opening-layout, .gathering-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 48rem) { .group-layout { grid-template-columns: minmax(0, 1fr); } .content { padding-top: 2.5rem; } }
+@media (max-width: 42rem) { .search-fields, .gathering-edit-panel .time-fields { grid-template-columns: minmax(0, 1fr); } }
