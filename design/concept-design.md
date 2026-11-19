@@ -131,14 +131,14 @@ actions
       set user's membership to DECLINED
       return
 
-  join (user: User, url: String) : return ()
+  join (user: User, url: String) : return (group: Group)
     where a group has the supplied url and status ACTIVE,
       and user either has no membership in that group or has
         membership status PENDING, DECLINED, or LEFT
     then
       create user's membership in that group if absent
       set that membership's status to MEMBER
-      return
+      return group
 
   leave (user: User, group: Group) : return ()
     where group is ACTIVE, user's membership is MEMBER,
@@ -177,9 +177,15 @@ queries
 
   _joinUrl (group: Group) : optional (url: String)
     Returns group's join URL; no row if group does not exist.
+
+  _visibleFor (user: User) : one (groups: set of GroupSummary)
+    Returns active groups in which user is a member or pending invitee,
+    including each group's identity, name, owner, membership status,
+    and current member count. Never includes declined, left, removed,
+    or closed groups.
 ```
 
-**Notes.** Grouping owns membership, not openings or gatherings. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
+**Notes.** Grouping owns membership, not openings or gatherings. The stored join URL is an unguessable relative `/join/` path; the UI attaches its own origin when sharing it, and opening that path does not join a group. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
 
 ## AvailabilitySharing
 

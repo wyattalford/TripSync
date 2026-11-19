@@ -1,10 +1,12 @@
 # Application types
 
-OpenTime identifies people through Authenticating. Other concept instances will bind their external User type to Authenticating.User as they are implemented.
+OpenTime identifies people through Authenticating. Grouping binds its external User type to Authenticating.User.
 
 ```types
 ```
 
 ```instances
 instantiate Authenticating
+instantiate Grouping with
+  User is Authenticating.User
 ```

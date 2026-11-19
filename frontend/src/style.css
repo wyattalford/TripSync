@@ -23,6 +23,7 @@ h1 { max-width: 14ch; margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); line-hei
 .intro { max-width: 38rem; margin: 1.5rem 0 2.5rem; font-size: 1.1rem; line-height: 1.6; }
 .status-panel { max-width: 38rem; padding: 1.4rem; border: 1px solid #cbd9d4; border-radius: .65rem; background: #fff; }
 .status-panel h2 { margin: 0 0 .65rem; font-size: 1.1rem; }
+.status-panel h3 { margin: 0 0 .65rem; font-size: 1.1rem; }
 .status-panel p { margin: 0; line-height: 1.5; }
 .status-panel form { display: grid; gap: .55rem; }
 .status-panel label { margin-top: .55rem; font-weight: 700; }
@@ -38,3 +39,22 @@ h1 { max-width: 14ch; margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); line-hei
 button { margin-top: 1rem; padding: .65rem 1rem; border: 0; border-radius: .4rem; background: #0d6055; color: #fff; cursor: pointer; }
 button:hover { background: #084c43; }
 button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
+.signed-in > h2 { margin: 0; }
+.signed-in > button { margin: .8rem 0 2rem; }
+.group-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 1fr); align-items: start; gap: 1.25rem; }
+.group-layout .status-panel { max-width: none; }
+.group-actions { display: grid; gap: 1.25rem; }
+.group-actions .status-panel p { margin-bottom: 1rem; }
+.group-list { display: grid; gap: 1rem; padding: 0; margin: 1rem 0 0; list-style: none; }
+.group-card { padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; }
+.group-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+.group-heading strong { font-size: 1.05rem; }
+.group-heading span { color: #526970; font-size: .9rem; }
+.group-card form { margin-top: .75rem; }
+.group-card > label { display: block; margin: .9rem 0 .35rem; font-weight: 700; }
+.button-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+button.secondary { background: #e0eee9; color: #0d6055; }
+button.secondary:hover { background: #cce3da; }
+.group-controls { margin-top: .8rem; }
+.group-controls summary { cursor: pointer; color: #0d6055; font-weight: 700; }
+@media (max-width: 48rem) { .group-layout { grid-template-columns: 1fr; } .content { padding-top: 2.5rem; } }
