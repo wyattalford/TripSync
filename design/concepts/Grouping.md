@@ -18,6 +18,8 @@ opaque Members
   A set of User identities with MEMBER status.
 opaque GroupSummaries
   A set of active group summaries visible to one user.
+opaque GroupIds
+  A set of Group identities selected as audiences.
 ```
 
 ## State
@@ -138,4 +140,10 @@ _joinUrl(group: Group) : optional (url: String)
 
 _visibleFor(user: User) : one (groups: GroupSummaries)
   Returns active groups where the user is a member or pending invitee, with group, name, owner, membership, and memberCount for each.
+
+_canShareWith(user: User, groups: GroupIds) : one (allowed: Flag)
+  Answers true exactly when every supplied group is active and user is a member. An empty set is allowed.
+
+_accessFor(user: User, group: Group) : one (allowed: Flag, members: Members)
+  Returns allowed true and current members only for an active member; otherwise false and an empty member set.
 ```

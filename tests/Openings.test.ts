@@ -1,0 +1,104 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { createGateway } from "@mit-sdg/sync-engine/boundary";
+import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
+import { MongoClient, type Db } from "mongodb";
+import { assembleApplication } from "../src/assembly.ts";
+import { AvailabilitySharingConcept, OpeningConflict } from "../src/concepts/AvailabilitySharing.ts";
+import { policy } from "../src/http.ts";
+
+const configuredUrl = process.env.MONGODB_URL;
+if (!configuredUrl) throw new Error("MONGODB_URL is required for opening tests.");
+const testUrl = new URL(configuredUrl);
+testUrl.pathname = "/opentime_openings_test";
+const client = new MongoClient(testUrl.toString());
+let db: Db;
+
+async function resetTestDatabase() {
+  if (db.databaseName !== "opentime_openings_test") throw new Error("Refusing to reset another database.");
+  await db.dropDatabase();
+}
+
+function post(path: string, body: Record<string, unknown> = {}, cookie?: string) {
+  return new Request(`http://127.0.0.1:5173/api${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173", ...(cookie ? { cookie } : {}) },
+    body: JSON.stringify(body),
+  });
+}
+
+function handler() {
+  const application = assembleApplication(db);
+  return createHttpHandler({ application, gateway: createGateway({ application }), policy });
+}
+
+function at(hours: number): string {
+  return new Date(Date.now() + hours * 3_600_000).toISOString();
+}
+
+describe("OpenTime opening boundary", () => {
+  beforeAll(async () => { await client.connect(); db = client.db(); });
+  beforeEach(resetTestDatabase);
+  afterAll(async () => { await resetTestDatabase(); await client.close(); });
+
+  test("keeps openings private and returns only full-group, purpose-matched intervals", async () => {
+    const api = handler();
+    async function account(username: string) {
+      expect((await api(post("/auth/register", { username, password: "safe password" }))).status).toBe(200);
+      const signedIn = await api(post("/auth/sign-in", { username, password: "safe password" }));
+      return signedIn.headers.get("set-cookie")!.split(";", 1)[0];
+    }
+    const john = await account("john");
+    const walker = await account("walker");
+    const noah = await account("noah");
+    const group = (await (await api(post("/groups/create", { name: "Friends" }, john))).json() as { group: string }).group;
+    await api(post("/groups/invite", { group, username: "walker" }, john));
+    await api(post("/groups/accept", { group }, walker));
+    await api(post("/groups/invite", { group, username: "noah" }, john));
+
+    const from = at(2), to = at(5);
+    const johnOpening = (await (await api(post("/openings/create", { purpose: "movie", start: from, end: to }, john))).json() as { opening: string }).opening;
+    const walkerOpening = (await (await api(post("/openings/create", { purpose: "movie", start: at(3), end: at(5) }, walker))).json() as { opening: string }).opening;
+    expect((await api(post("/openings/publish", { opening: johnOpening, audiences: [group] }, john))).status).toBe(200);
+    const search = { group, purpose: "movie", from, to, duration: 60 };
+    expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [] });
+    expect((await api(post("/openings/publish", { opening: walkerOpening, audiences: [group] }, walker))).status).toBe(200);
+    const result = await api(post("/openings/overlap", search, john));
+    expect(result.status).toBe(200);
+    const overlap = await result.json() as { overlaps: { start: string; end: string }[] };
+    expect(overlap.overlaps).toHaveLength(1);
+    expect(new Date(overlap.overlaps[0]!.start).getTime()).toBeGreaterThanOrEqual(new Date(at(3)).getTime() - 5_000);
+    expect(overlap.overlaps[0]!.end).toBe(to);
+    expect(JSON.stringify(overlap)).not.toContain("owner");
+    expect(await (await api(post("/openings/overlap", { ...search, purpose: "Movie" }, john))).json()).toEqual({ overlaps: [] });
+    expect((await api(post("/openings/overlap", search, noah))).status).toBe(403);
+    const mine = await api(post("/openings/mine", {}, walker));
+    expect((await mine.json() as { openings: { opening: string }[] }).openings.map((item) => item.opening)).toEqual([walkerOpening]);
+    expect((await api(post("/openings/withdraw", { opening: johnOpening }, walker))).status).toBe(403);
+    expect((await api(post("/openings/publish", { opening: johnOpening, audiences: [group] }, noah))).status).toBe(403);
+    expect((await api(post("/openings/revise", { opening: walkerOpening, purpose: "studying", start: at(3), end: to, audiences: [group] }, walker))).status).toBe(200);
+    expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [] });
+    expect((await api(post("/openings/withdraw", { opening: walkerOpening }, walker))).status).toBe(200);
+    expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [] });
+    expect((await api(post("/groups/leave", { group }, walker))).status).toBe(200);
+    expect((await api(post("/openings/overlap", search, walker))).status).toBe(403);
+  });
+
+  test("serializes concurrent writes and updates overlaps after revision or withdrawal", async () => {
+    const concept = new AvailabilitySharingConcept(db);
+    const first = { owner: "user-1", purpose: "movie", start: at(2), end: at(4) };
+    const second = { owner: "user-1", purpose: "dinner", start: at(3), end: at(5) };
+    const attempts = await Promise.allSettled([concept.create(first), concept.create(second)]);
+    expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
+    expect(attempts.filter((attempt) => attempt.status === "rejected" && attempt.reason instanceof OpeningConflict)).toHaveLength(1);
+    const owned = await concept._owned({ user: "user-1" });
+    expect(owned).toHaveLength(1);
+    const original = owned[0]!;
+    await expect(concept.revise({ user: "user-1", opening: original.opening, purpose: original.purpose, start: original.start, end: original.end, audiences: [] })).rejects.toThrow();
+    const newEnd = at(6);
+    await concept.revise({ user: "user-1", opening: original.opening, purpose: original.purpose, start: original.start, end: newEnd, audiences: [] });
+    expect((await concept._owned({ user: "user-1" }))[0]!.end).toBe(newEnd);
+    await concept.withdraw({ user: "user-1", opening: original.opening });
+    expect(await concept._owned({ user: "user-1" })).toEqual([]);
+    await expect(concept.create({ owner: "user-1", purpose: "movie", start: at(-3), end: at(-1) })).rejects.toThrow();
+  });
+});

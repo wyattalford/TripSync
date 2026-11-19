@@ -6,6 +6,7 @@ import type { applicationConceptSet as ApplicationConceptSet } from "../src/conc
 type AtPath<T, P extends readonly string[]> = P extends readonly [infer H extends string, ...infer R extends string[]] ? H extends keyof T ? AtPath<T[H], R> : H extends `${number}` ? T extends readonly (infer Item)[] ? AtPath<Item, R> : never : never : T;
 type QueryRow<T> = T extends readonly (infer Row)[] ? Row : T;
 type AllOf<T extends readonly unknown[]> = T extends readonly [infer Head, ...infer Rest] ? Head & AllOf<Rest> : unknown;
+type OneOf<T extends readonly unknown[]> = T[number];
 type Jsonify<T> = T extends Date ? string : T extends null | boolean | number | string ? T : T extends (...args: never[]) => unknown ? never : T extends readonly (infer Item)[] ? Jsonify<Item>[] : T extends object ? { [K in keyof T]: Jsonify<T[K]> } : never;
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -154,6 +155,76 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "GROUP_FORBIDDEN" | "GROUP_NOT_FOUND" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/openings/create": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["purpose"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["start"]>>;
+    };
+    output: {
+      "opening": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>>, ["opening"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_OPENING" | "OPENING_CONFLICT" | "UNKNOWN_SESSION" };
+  };
+  "/openings/mine": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "openings": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_ownedSnapshot"]>>>, ["openings"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/openings/overlap": {
+    input: {
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
+      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>]>>;
+    };
+    output: {
+      "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;
+    };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/openings/publish": {
+    input: {
+      "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["publish"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["publish"]>[0], ["opening"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "published": true;
+    };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+  };
+  "/openings/revise": {
+    input: {
+      "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["end"]>>;
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["opening"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["purpose"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["start"]>>;
+    };
+    output: {
+      "revised": true;
+    };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "INVALID_OPENING" | "OPENING_CONFLICT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+  };
+  "/openings/withdraw": {
+    input: {
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["withdraw"]>[0], ["opening"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "withdrawn": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+  };
 };
 
 export type HttpAppWideError = never;
@@ -281,5 +352,68 @@ export type OpenTimeWireHttp = {
       "removed": true;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/openings/create": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["purpose"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["start"]>>;
+    };
+    output: {
+      "opening": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>>, ["opening"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/mine": {
+    input: Record<string, never>;
+    output: {
+      "openings": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_ownedSnapshot"]>>>, ["openings"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/overlap": {
+    input: {
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
+      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
+      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>]>>;
+    };
+    output: {
+      "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/publish": {
+    input: {
+      "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["publish"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["publish"]>[0], ["opening"]>>;
+    };
+    output: {
+      "published": true;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/revise": {
+    input: {
+      "audiences": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["audiences"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canShareWith"]>[0], ["groups"]>]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["end"]>>;
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["opening"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["purpose"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["revise"]>[0], ["start"]>>;
+    };
+    output: {
+      "revised": true;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/withdraw": {
+    input: {
+      "opening": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["withdraw"]>[0], ["opening"]>>;
+    };
+    output: {
+      "withdrawn": true;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
 };

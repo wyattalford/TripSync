@@ -183,6 +183,15 @@ queries
     including each group's identity, name, owner, membership status,
     and current member count. Never includes declined, left, removed,
     or closed groups.
+
+  _canShareWith (user: User, groups: set of Group) : one (allowed: Flag)
+    Returns true exactly when every supplied group is active and user is a
+    member. An empty set is allowed for a private opening.
+
+  _accessFor (user: User, group: Group)
+    : one (allowed: Flag, members: set of User)
+    Returns allowed and current members only for an active member;
+    otherwise false and no members.
 ```
 
 **Notes.** Grouping owns membership, not openings or gatherings. The stored join URL is an unguessable relative `/join/` path; the UI attaches its own origin when sharing it, and opening that path does not join a group. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
@@ -265,9 +274,18 @@ queries
       have not ended, and intersect [from, to). Each interval is clipped
       to that range and the current time. Returns no rows for an empty
       or reversed range. Row order is unspecified.
+
+  _ownedSnapshot (user: User) : one (openings: set of OpeningDetails)
+    Returns the same owner-only details in one record for the editor.
+
+  _sharedSnapshot (audience: Audience, purpose: String,
+    from: DateTime, to: DateTime, now: DateTime)
+    : one (intervals: set of SharedInterval)
+    Returns the same clipped intervals in one internal record using the
+    request's time instant. It is never a public endpoint.
 ```
 
-**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old willingness is not assumed to continue. Purpose values use consistent application labels such as dinner, studying, or watching a movie. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
+**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old willingness is not assumed to continue. Purpose is free text, trimmed when saved and searched, and matched exactly with case preserved. Search duration is measured in minutes. Openings belonging to one owner cannot overlap even when their purposes differ. The implementation stores one owner's openings together and checks a revision on every update to enforce this rule under concurrent writes. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
 
 All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner and matching the same purpose are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
 
@@ -636,7 +654,7 @@ then
   respond to that requester with overlaps ordered by start
 ```
 
-**Notes.** The MVP finds overlaps for the group's complete current membership. A member without a matching shared opening contributes no usable time, producing no full-group overlap. The response contains common intervals, not individual openings, reasons for unavailability, audiences, or details of conflicting gatherings. A changed opening or membership is reflected on the next calculation. Confirmation masks conflicting time through `_commitments`, and withdrawal or cancellation releases it if the underlying opening still exists. Calculations use a consistent current snapshot. Aggregate results can still reveal limited information, especially in a two-person group.
+**Notes.** The MVP finds overlaps for the group's complete current membership. A member without a matching shared opening contributes no usable time, producing no full-group overlap. The response contains common intervals, not individual openings, reasons for unavailability, audiences, or details of conflicting gatherings. A changed opening or membership is reflected on the next calculation. The current AvailabilitySharing slice supplies an empty commitment set; Gathering will supply `_commitments` when implemented. Confirmation will then mask conflicting time, and withdrawal or cancellation will release it if the underlying opening still exists. The query uses one request-time instant for clipping. A strict cross-concept database snapshot for membership and openings is not yet implemented. Aggregate results can still reveal limited information, especially in a two-person group.
 
 ### Propose a gathering
 

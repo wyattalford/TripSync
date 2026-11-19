@@ -7,7 +7,7 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 
 ## Current build
 
-The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Opening, overlap, gathering, and notice features are still being implemented.
+The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create private dated openings, share them with chosen groups, revise or withdraw them, and search for full-group overlaps by purpose and minimum duration. Confirmed gathering commitments are not yet subtracted because Gathering is still being implemented; the notice inbox also remains to be built.
 
 ### Run locally
 

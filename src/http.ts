@@ -11,6 +11,9 @@ export const policy = httpPolicy({
     GROUP_FORBIDDEN: "FORBIDDEN",
     MEMBERSHIP_CONFLICT: "CONFLICT",
     GROUP_NOT_FOUND: "NOT_FOUND",
+    INVALID_OPENING: "INVALID_REQUEST",
+    OPENING_CONFLICT: "CONFLICT",
+    OPENING_FORBIDDEN: "FORBIDDEN",
   },
   cookies: {
     session: {

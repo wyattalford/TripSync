@@ -32,7 +32,38 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 9.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 10.
+
+### AvailabilitySharing
+
+Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), line 1.
+
+#### Actions
+
+- `create(owner: User, purpose: String, start: DateTime, end: DateTime) : returns (opening: Opening)`
+  - Refuses `INVALID_OPENING`: Enter a purpose and a valid future-ending time range.
+  - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
+- `publish(user: User, opening: Opening, audiences: Audiences) : returns ()`
+  - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
+- `revise(user: User, opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences) : returns ()`
+  - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
+  - Refuses `INVALID_OPENING`: Change at least one detail of an active opening to a valid interval.
+  - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
+- `withdraw(user: User, opening: Opening) : returns ()`
+  - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
+
+#### Queries
+
+- `_owned(user: User) : many (opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences)`
+- `_sharedWith(audience: Audience, purpose: String, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)`
+- `_sharedSnapshot(audience: Audience, purpose: String, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)`
+- `_ownedSnapshot(user: User) : one (openings: OwnedOpenings)`
+
+#### Instances
+
+- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 14.
+  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 16.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 15.
 
 ### Grouping
 
@@ -66,11 +97,17 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 - `_groupsFor(user: User) : many (group: Group)`
 - `_joinUrl(group: Group) : optional (url: String)`
 - `_visibleFor(user: User) : one (groups: GroupSummaries)`
+- `_canShareWith(user: User, groups: GroupIds) : one (allowed: Flag)`
+- `_accessFor(user: User, group: Group) : one (allowed: Flag, members: Members)`
 
 #### Instances
 
-- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 10.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 11.
+- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 11.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 12.
+
+## Computations
+
+- `fullGroupOverlaps(members: Grouping.Members, openings: AvailabilitySharing.SharedIntervals, commitments: AvailabilitySharing.SharedIntervals, from: DateTime, to: DateTime, now: DateTime, durationMinutes: Number) : AvailabilitySharing.OverlapIntervals` — [Openings composition](../design/compositions/Openings.md), line 17.
 
 ## Reactions
 
@@ -637,6 +674,270 @@ then
   RequestBoundary.respond (error: "GROUP_NOT_FOUND", requestId)
 ```
 
+### OpenTime.Openings.Create
+
+Authored path: `OpenTime.Openings.Create`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 8.
+
+```reaction
+when RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Create#2
+
+Authored path: `OpenTime.Openings.Create`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 8.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Create
+where
+  earlier, RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+then
+  AvailabilitySharing.create (end, owner: user, purpose, start)
+```
+
+### OpenTime.Openings.Create#3
+
+Authored path: `OpenTime.Openings.Create`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 8.
+
+```reaction
+when AvailabilitySharing.create (end, owner: user, purpose, start, opening), asked by OpenTime.Openings.Create#2
+where
+  earlier, RequestBoundary.request (end, path: "/openings/create", purpose, requestId, session, start)
+then
+  RequestBoundary.respond (opening, requestId)
+```
+
+### OpenTime.Openings.FindOverlap
+
+Authored path: `OpenTime.Openings.FindOverlap`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 13.
+
+```reaction
+when RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.FindOverlap:member#2
+
+Authored path: `OpenTime.Openings.FindOverlap`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 13.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.FindOverlap
+where
+  instant is the current flow's instant
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
+  Grouping._accessFor (group, user) has (allowed: true, members)
+  AvailabilitySharing._sharedSnapshot (audience: group, from, now: instant, purpose, to) has (intervals)
+  overlaps is fullGroupOverlaps (commitments: [], durationMinutes: duration, from, members, now: instant, openings: intervals, to)
+then
+  RequestBoundary.respond (overlaps, requestId)
+```
+
+### OpenTime.Openings.FindOverlap:not-member#2
+
+Authored path: `OpenTime.Openings.FindOverlap`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 13.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.FindOverlap
+where
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
+  Grouping._accessFor (group, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
+### OpenTime.Openings.Mine
+
+Authored path: `OpenTime.Openings.Mine`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 12.
+
+```reaction
+when RequestBoundary.request (path: "/openings/mine", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Mine#2
+
+Authored path: `OpenTime.Openings.Mine`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 12.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Mine
+where
+  AvailabilitySharing._ownedSnapshot (user) has (openings)
+  earlier, RequestBoundary.request (path: "/openings/mine", requestId, session)
+then
+  RequestBoundary.respond (openings, requestId)
+```
+
+### OpenTime.Openings.Publish
+
+Authored path: `OpenTime.Openings.Publish`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 9.
+
+```reaction
+when RequestBoundary.request (audiences, opening, path: "/openings/publish", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Publish:allowed#2
+
+Authored path: `OpenTime.Openings.Publish`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 9.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Publish
+where
+  earlier, RequestBoundary.request (audiences, opening, path: "/openings/publish", requestId, session)
+  Grouping._canShareWith (groups: audiences, user) has (allowed: true)
+then
+  AvailabilitySharing.publish (audiences, opening, user)
+```
+
+### OpenTime.Openings.Publish:allowed#3
+
+Authored path: `OpenTime.Openings.Publish`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 9.
+
+```reaction
+when AvailabilitySharing.publish (audiences, opening, user), asked by OpenTime.Openings.Publish:allowed#2
+where
+  earlier, RequestBoundary.request (audiences, opening, path: "/openings/publish", requestId, session)
+then
+  RequestBoundary.respond (published: true, requestId)
+```
+
+### OpenTime.Openings.Publish:not-member#2
+
+Authored path: `OpenTime.Openings.Publish`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 9.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Publish
+where
+  earlier, RequestBoundary.request (audiences, opening, path: "/openings/publish", requestId, session)
+  Grouping._canShareWith (groups: audiences, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
+### OpenTime.Openings.Revise
+
+Authored path: `OpenTime.Openings.Revise`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 10.
+
+```reaction
+when RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Revise:allowed#2
+
+Authored path: `OpenTime.Openings.Revise`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 10.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Revise
+where
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+  Grouping._canShareWith (groups: audiences, user) has (allowed: true)
+then
+  AvailabilitySharing.revise (audiences, end, opening, purpose, start, user)
+```
+
+### OpenTime.Openings.Revise:allowed#3
+
+Authored path: `OpenTime.Openings.Revise`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 10.
+
+```reaction
+when AvailabilitySharing.revise (audiences, end, opening, purpose, start, user), asked by OpenTime.Openings.Revise:allowed#2
+where
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+then
+  RequestBoundary.respond (requestId, revised: true)
+```
+
+### OpenTime.Openings.Revise:not-member#2
+
+Authored path: `OpenTime.Openings.Revise`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 10.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Revise
+where
+  earlier, RequestBoundary.request (audiences, end, opening, path: "/openings/revise", purpose, requestId, session, start)
+  Grouping._canShareWith (groups: audiences, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
+### OpenTime.Openings.Withdraw
+
+Authored path: `OpenTime.Openings.Withdraw`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 11.
+
+```reaction
+when RequestBoundary.request (opening, path: "/openings/withdraw", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Withdraw#2
+
+Authored path: `OpenTime.Openings.Withdraw`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 11.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Withdraw
+where
+  earlier, RequestBoundary.request (opening, path: "/openings/withdraw", requestId, session)
+then
+  AvailabilitySharing.withdraw (opening, user)
+```
+
+### OpenTime.Openings.Withdraw#3
+
+Authored path: `OpenTime.Openings.Withdraw`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 11.
+
+```reaction
+when AvailabilitySharing.withdraw (opening, user), asked by OpenTime.Openings.Withdraw#2
+where
+  earlier, RequestBoundary.request (opening, path: "/openings/withdraw", requestId, session)
+then
+  RequestBoundary.respond (requestId, withdrawn: true)
+```
+
 ## Endpoint input contracts
 
 Before recording an action ask, the boundary rejects a body that is not an
@@ -658,3 +959,9 @@ not listed here have no explicit input contract.
 - `/groups/link` — requires `session`, `group`
 - `/groups/list` — requires `session`
 - `/groups/remove` — requires `session`, `group`, `username`
+- `/openings/create` — requires `session`, `purpose`, `start`, `end`
+- `/openings/mine` — requires `session`
+- `/openings/overlap` — requires `session`, `group`, `purpose`, `from`, `to`, `duration`
+- `/openings/publish` — requires `session`, `opening`, `audiences`
+- `/openings/revise` — requires `session`, `opening`, `purpose`, `start`, `end`, `audiences`
+- `/openings/withdraw` — requires `session`, `opening`

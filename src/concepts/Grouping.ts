@@ -152,4 +152,20 @@ export class GroupingConcept {
       memberCount: Object.values(item.memberships).filter((status) => status === "MEMBER").length,
     })) };
   }
+
+  async _canShareWith({ user, groups }: { user: string; groups: string[] }) {
+    const requested = [...new Set(groups)];
+    if (requested.length === 0) return { allowed: true };
+    const found = await this.groups.countDocuments({
+      _id: { $in: requested }, status: "ACTIVE", [membershipKey(user)]: "MEMBER",
+    });
+    return { allowed: found === requested.length };
+  }
+
+  async _accessFor({ user, group }: { user: string; group: string }) {
+    const found = await this.groups.findOne({ _id: group, status: "ACTIVE", [membershipKey(user)]: "MEMBER" });
+    if (!found) return { allowed: false, members: [] as string[] };
+    return { allowed: true, members: Object.entries(found.memberships)
+      .filter(([, status]) => status === "MEMBER").map(([member]) => member) };
+  }
 }

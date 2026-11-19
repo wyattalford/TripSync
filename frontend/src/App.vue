@@ -4,12 +4,27 @@ import { api } from "./api.ts";
 
 type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
+type Opening = { opening: string; purpose: string; start: string; end: string; audiences: string[] };
+type Interval = { start: string; end: string };
 const mode = ref<Mode>("sign-in");
 const username = ref("");
 const password = ref("");
 const currentUsername = ref("");
 const currentUser = ref("");
 const groups = ref<GroupSummary[]>([]);
+const openings = ref<Opening[]>([]);
+const openingId = ref("");
+const openingPurpose = ref("");
+const openingStart = ref("");
+const openingEnd = ref("");
+const openingAudiences = ref<string[]>([]);
+const searchGroup = ref("");
+const searchPurpose = ref("");
+const searchFrom = ref("");
+const searchTo = ref("");
+const searchDuration = ref(60);
+const overlaps = ref<Interval[]>([]);
+const searched = ref(false);
 const groupName = ref("");
 const joinInput = ref(location.pathname.startsWith("/join/") ? location.href : "");
 const inviteNames = ref<Record<string, string>>({});
@@ -42,6 +57,115 @@ function groupError(error: string): string {
   return "OpenTime could not complete that request. Try again.";
 }
 
+function openingError(error: string): string {
+  if (error === "UNAUTHORIZED") return "Your session ended. Sign in again.";
+  if (error === "FORBIDDEN") return "You can only change your own opening and share it with groups you belong to.";
+  if (error === "CONFLICT") return "Your openings cannot overlap. Change one of the time ranges.";
+  if (error === "INVALID_REQUEST") return "Enter a purpose and a valid time range that has not ended.";
+  return "OpenTime could not complete that request. Try again.";
+}
+
+function localTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function localInput(iso: string): string {
+  const date = new Date(iso);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function absoluteTime(value: string): string | null {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+async function refreshOpenings() {
+  const result = await api.openings.mine();
+  if ("error" in result) showMessage(openingError(result.error), "error");
+  else openings.value = result.openings;
+}
+
+function resetOpeningForm() {
+  openingId.value = "";
+  openingPurpose.value = "";
+  openingStart.value = "";
+  openingEnd.value = "";
+  openingAudiences.value = [];
+}
+
+function editOpening(opening: Opening) {
+  openingId.value = opening.opening;
+  openingPurpose.value = opening.purpose;
+  openingStart.value = localInput(opening.start);
+  openingEnd.value = localInput(opening.end);
+  openingAudiences.value = [...opening.audiences];
+  document.getElementById("opening-form")?.scrollIntoView({ behavior: "smooth" });
+}
+
+async function saveOpening() {
+  const start = absoluteTime(openingStart.value);
+  const end = absoluteTime(openingEnd.value);
+  const purpose = openingPurpose.value.trim();
+  if (!purpose || !start || !end || start >= end || new Date(end) <= new Date()) {
+    return showMessage("Enter a purpose and a valid time range that has not ended.", "error");
+  }
+  busy.value = true;
+  try {
+    if (openingId.value) {
+      const result = await api.openings.revise({ opening: openingId.value, purpose, start, end, audiences: openingAudiences.value });
+      if ("error" in result) return showMessage(openingError(result.error), "error");
+      showMessage("Opening updated.", "success");
+    } else {
+      const created = await api.openings.create({ purpose, start, end });
+      if ("error" in created) return showMessage(openingError(created.error), "error");
+      if (openingAudiences.value.length > 0) {
+        const shared = await api.openings.publish({ opening: created.opening, audiences: openingAudiences.value });
+        if ("error" in shared) {
+          await refreshOpenings();
+          resetOpeningForm();
+          return showMessage(`Opening saved privately, but sharing failed. ${openingError(shared.error)}`, "error");
+        }
+      }
+      showMessage(openingAudiences.value.length ? "Opening shared with your selected groups." : "Private opening saved. You can share it later.", "success");
+    }
+    resetOpeningForm();
+    await refreshOpenings();
+    searched.value = false;
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function withdrawOpening(opening: string) {
+  if (!window.confirm("Withdraw this opening from every group?")) return;
+  busy.value = true;
+  try {
+    const result = await api.openings.withdraw({ opening });
+    if ("error" in result) return showMessage(openingError(result.error), "error");
+    if (openingId.value === opening) resetOpeningForm();
+    await refreshOpenings();
+    searched.value = false;
+    showMessage("Opening withdrawn.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function findOverlap() {
+  const from = absoluteTime(searchFrom.value);
+  const to = absoluteTime(searchTo.value);
+  if (!searchGroup.value || !searchPurpose.value.trim() || !from || !to || from >= to || !Number.isFinite(searchDuration.value) || searchDuration.value <= 0) {
+    return showMessage("Choose a group, purpose, valid range, and positive duration.", "error");
+  }
+  busy.value = true;
+  try {
+    const result = await api.openings.overlap({ group: searchGroup.value, purpose: searchPurpose.value.trim(), from, to, duration: searchDuration.value });
+    if ("error" in result) return showMessage(openingError(result.error), "error");
+    overlaps.value = result.overlaps;
+    searched.value = true;
+    showMessage("Shared openings updated.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
 async function refreshGroups() {
   const result = await api.groups.list();
   if ("error" in result) {
@@ -57,11 +181,12 @@ async function refreshAccount() {
     const result = await api.auth.current();
     currentUsername.value = "error" in result ? "" : result.username;
     currentUser.value = "error" in result ? "" : result.user;
-    if (currentUser.value) await refreshGroups();
+    if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings()]);
   } catch {
     currentUsername.value = "";
     currentUser.value = "";
     groups.value = [];
+    openings.value = [];
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
     loading.value = false;
@@ -193,6 +318,9 @@ async function signOut() {
       return;
     }
     currentUsername.value = "";
+    currentUser.value = "";
+    groups.value = [];
+    openings.value = [];
     showMessage("Signed out.", "success");
   } catch {
     showMessage("OpenTime could not reach the server. Try again.", "error");
@@ -270,6 +398,66 @@ onMounted(refreshAccount);
             </section>
           </div>
         </div>
+        <div class="opening-layout">
+          <section class="status-panel" id="opening-form">
+            <h3>{{ openingId ? "Revise your opening" : "Add an opening" }}</h3>
+            <p>Choose when an invitation for one purpose would be welcome. Only you can see the individual opening.</p>
+            <form @submit.prevent="saveOpening">
+              <label for="opening-purpose">Purpose</label>
+              <input id="opening-purpose" v-model="openingPurpose" placeholder="e.g. watching a movie" :disabled="busy" required />
+              <p class="field-hint">Purpose matching uses the same words and capitalization.</p>
+              <div class="time-fields">
+                <div><label for="opening-start">From</label><input id="opening-start" v-model="openingStart" type="datetime-local" :disabled="busy" required /></div>
+                <div><label for="opening-end">Until</label><input id="opening-end" v-model="openingEnd" type="datetime-local" :disabled="busy" required /></div>
+              </div>
+              <fieldset class="group-choices">
+                <legend>Share with groups</legend>
+                <p v-if="groups.every((group) => group.membership !== 'MEMBER')">Join a group to share this opening. You can save it privately now.</p>
+                <label v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" class="check-row">
+                  <input v-model="openingAudiences" type="checkbox" :value="group.group" :disabled="busy" />{{ group.name }}
+                </label>
+              </fieldset>
+              <div class="button-row">
+                <button type="submit" :disabled="busy">{{ openingId ? "Save changes" : "Save opening" }}</button>
+                <button v-if="openingId" type="button" class="secondary" :disabled="busy" @click="resetOpeningForm">Cancel edit</button>
+              </div>
+            </form>
+          </section>
+          <section class="status-panel">
+            <h3>Your openings</h3>
+            <p v-if="openings.length === 0">No openings yet. Add one to start finding time together.</p>
+            <ul v-else class="opening-list">
+              <li v-for="opening in openings" :key="opening.opening" class="opening-card">
+                <strong>{{ opening.purpose }}</strong>
+                <span>{{ localTime(opening.start) }} – {{ localTime(opening.end) }}</span>
+                <span>{{ opening.audiences.length ? `Shared with ${opening.audiences.length} group${opening.audiences.length === 1 ? '' : 's'}` : 'Private' }}</span>
+                <div class="button-row">
+                  <button type="button" class="secondary" :disabled="busy || new Date(opening.end) <= new Date()" @click="editOpening(opening)">Edit</button>
+                  <button type="button" class="secondary" :disabled="busy" @click="withdrawOpening(opening.opening)">Withdraw</button>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </div>
+        <section class="status-panel overlap-panel">
+          <h3>Find shared time</h3>
+          <p>Search the current members of one group. Results show only times everyone has shared for this purpose.</p>
+          <form @submit.prevent="findOverlap">
+            <div class="search-fields">
+              <div><label for="search-group">Group</label><select id="search-group" v-model="searchGroup" :disabled="busy" required><option value="" disabled>Choose a group</option><option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option></select></div>
+              <div><label for="search-purpose">Purpose</label><input id="search-purpose" v-model="searchPurpose" placeholder="e.g. watching a movie" :disabled="busy" required /></div>
+              <div><label for="search-from">From</label><input id="search-from" v-model="searchFrom" type="datetime-local" :disabled="busy" required /></div>
+              <div><label for="search-to">Until</label><input id="search-to" v-model="searchTo" type="datetime-local" :disabled="busy" required /></div>
+              <div><label for="search-duration">At least (minutes)</label><input id="search-duration" v-model.number="searchDuration" type="number" min="1" step="1" :disabled="busy" required /></div>
+            </div>
+            <button type="submit" :disabled="busy">Find shared time</button>
+          </form>
+          <div v-if="searched" class="overlap-results" aria-live="polite">
+            <h4>Shared openings</h4>
+            <p v-if="overlaps.length === 0">No shared time in this range yet. Everyone in the group needs a matching opening.</p>
+            <ul v-else><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}</li></ul>
+          </div>
+        </section>
       </section>
       <section v-else class="status-panel">
         <div class="mode-switch" aria-label="Account action">
