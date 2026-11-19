@@ -11,6 +11,10 @@ A person registers a unique username and password, then signs in to receive a se
 ## Types
 
 ```types
+opaque UserSet
+  A set of registered User identifiers supplied by an authorized reaction.
+opaque AccountLabels
+  Identifiers and public usernames for those users.
 ```
 
 ## State
@@ -82,4 +86,7 @@ _byUsername(username: String) : optional (user: User)
 
 _username(user: User) : optional (username: String)
   Answers this user's username, or no row.
+
+_usernames(users: UserSet) : one (accounts: AccountLabels)
+  Answers the identifiers and usernames of the supplied registered users.
 ```

@@ -64,6 +64,19 @@ const List = endpoint(
   { ...options, input: { required: ["session"] } },
 );
 
+const Members = endpoint(
+  "/groups/members",
+  ({ session, group, user, members, accounts }) => receive({ session, group })
+    .then(Authenticating.authenticate({ session }).responds({ user }))
+    .then(
+      where(Grouping._accessFor({ user, group }).is({ allowed: true, members }), Authenticating._usernames({ users: members }).is({ accounts }))
+        .then(respond({ accounts })).named("member"),
+      where(Grouping._accessFor({ user, group }).is({ allowed: false }))
+        .then(respond({ error: "GROUP_FORBIDDEN" })).named("not-member"),
+    ),
+  { ...options, input: { required: ["session", "group"] } },
+);
+
 const Link = endpoint(
   "/groups/link",
   ({ session, group, user, url }) => receive({ session, group })
@@ -113,4 +126,4 @@ const Close = endpoint(
   { ...options, input: { required: ["session", "group"] } },
 );
 
-export const composition = { Create, Invite, Accept, Decline, Join, List, Link, Leave, Remove, Close };
+export const composition = { Create, Invite, Accept, Decline, Join, List, Members, Link, Leave, Remove, Close };

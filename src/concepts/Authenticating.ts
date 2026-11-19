@@ -97,4 +97,9 @@ export class AuthenticatingConcept {
     const account = await this.users.findOne({ _id: user }, { projection: { username: 1 } });
     return account ? [{ username: account.username }] : [];
   }
+
+  async _usernames({ users }: { users: string[] }) {
+    const accounts = await this.users.find({ _id: { $in: users } }, { projection: { _id: 1, username: 1 } }).toArray();
+    return { accounts: accounts.map((account) => ({ user: account._id, username: account.username })) };
+  }
 }
