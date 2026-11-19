@@ -35,12 +35,12 @@ The preview serves built Vue files and `/api` from port 3000, with a fallback fo
 
 ### Deploy on 6.1040 Apps
 
-The course platform deploys a GitHub commit. The team selected `opentime` as its requested permanent app name; confirm that it is available before creating the app. Configure it with these settings:
+The course platform deploys a GitHub commit. The team has created the `opentime` app. Configure it with these settings:
 
 | Setting | Value |
 | --- | --- |
 | Repository | `https://github.com/wyattalford/TripSync` |
-| Branch | The branch containing the reviewed commit (`wyatt-alpha` currently) |
+| Branch | `main` is currently configured in 6.1040 Apps; deployment uses the exact chosen commit SHA |
 | Runtime | Bun |
 | Package directories | `.` and `frontend` |
 | Build script | `build` |
@@ -48,7 +48,7 @@ The course platform deploys a GitHub commit. The team selected `opentime` as its
 | Port | `3000` |
 | Health check | `/health` |
 
-Add the platform's MongoDB and name its connection variable `MONGODB_URL`. Set `PUBLIC_ORIGIN` to the app's exact HTTPS origin, expected to be `https://opentime.mit-sdg.dev` if that name is available, without a trailing slash. The platform supplies `HOST`, `PORT`, and `NODE_ENV`; do not copy local `.env` values into its settings. The server checks snapshot transaction support before serving requests, because confirmation and overlap search require it. A failed check prevents an unhealthy release from starting and appears in the deployment logs. Select the reviewed commit only after the local preview and checks pass, then smoke-test sign-in, an opening, a gathering confirmation, notices, and a reload at the public URL.
+The platform MongoDB is configured to expose `MONGODB_URL`. `PUBLIC_ORIGIN` has been added; its saved value must be checked against the app's exact HTTPS origin, `https://opentime.mit-sdg.dev`, without a trailing slash. The platform supplies `HOST`, `PORT`, and `NODE_ENV`; do not copy local `.env` values into its settings. The server checks snapshot transaction support before serving requests, because confirmation and overlap search require it. A failed check prevents an unhealthy release from starting and appears in the deployment logs. Select the reviewed commit only after the local preview and checks pass, then smoke-test sign-in, an opening, a gathering confirmation, notices, and a reload at the public URL.
 
 ## Pitch
 

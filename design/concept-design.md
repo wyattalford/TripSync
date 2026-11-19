@@ -732,6 +732,8 @@ then
 
 ### View a gathering and flag changed willingness
 
+**Planned after Alpha.** The Alpha view returns the current gathering and responses but does not yet compute `reviewNeeded`. The team deferred this personal warning; editing an opening never silently changes a confirmed attendance record.
+
 ```text
 when
   Requesting.viewGathering(session, gathering)

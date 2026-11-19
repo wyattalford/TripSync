@@ -287,6 +287,11 @@ async function cancelGathering(gathering: GatheringSummary) {
 }
 
 watch(proposalGroup, (group) => { proposalInvitees.value = []; void loadRoster(group); });
+watch([searchGroup, searchFrom, searchTo, searchDuration], () => {
+  overlaps.value = [];
+  suggestions.value = [];
+  searched.value = false;
+});
 
 function localTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
