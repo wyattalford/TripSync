@@ -20,6 +20,7 @@ state
 
   a set of Sessions with
     a user User
+    an expiresAt DateTime
 
 actions
   register (username: String, password: String) : return (user: User)
@@ -31,20 +32,21 @@ actions
       return user
 
   signIn (username: String, password: String)
-    : return (session: Session)
+    : return (session: Session, expiresAt: DateTime)
     where a user has the given username,
       and password matches that user's passwordVerifier
     then
-      create a new session associated with that user
-      return session
+      create a new session associated with that user, expiring
+        30 minutes from now
+      return session and expiresAt
 
   authenticate (session: Session) : return (user: User)
-    where session exists
+    where session exists and has not expired
     then
       return the user associated with session
 
   signOut (session: Session) : return ()
-    where session exists
+    where session exists and has not expired
     then
       remove session
       return
@@ -52,9 +54,15 @@ actions
 queries
   _exists (user: User) : one (exists: Flag)
     Returns whether user exists.
+
+  _byUsername (username: String) : optional (user: User)
+    Returns the registered user with this username, or no row.
+
+  _username (user: User) : optional (username: String)
+    Returns the user's username, or no row.
 ```
 
-**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Session identifiers are virtually unguessable, and password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions.
+**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Session identifiers are virtually unguessable, expire after 30 minutes, and are carried by an HttpOnly cookie in browser requests. Password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions. `_byUsername` lets a reaction resolve a named group invitee without passing account details into Grouping; `_username` supplies the authenticated account's display name.
 
 ## Grouping
 

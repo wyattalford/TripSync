@@ -1,0 +1,40 @@
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #172f35;
+  background: #f8f6f0;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button { font: inherit; }
+
+.app-shell { min-height: 100vh; }
+.site-header {
+  border-bottom: 1px solid #d6dfdb;
+  padding: 1.25rem max(1.5rem, calc((100vw - 64rem) / 2));
+}
+.wordmark { color: #0d6055; font-size: 1.2rem; font-weight: 800; }
+.content { max-width: 64rem; margin: 0 auto; padding: 4rem 1.5rem; }
+.eyebrow { margin: 0 0 .75rem; color: #526970; font-weight: 700; }
+h1 { max-width: 14ch; margin: 0; font-size: clamp(2.4rem, 6vw, 4.5rem); line-height: 1.05; letter-spacing: -.04em; }
+.intro { max-width: 38rem; margin: 1.5rem 0 2.5rem; font-size: 1.1rem; line-height: 1.6; }
+.status-panel { max-width: 38rem; padding: 1.4rem; border: 1px solid #cbd9d4; border-radius: .65rem; background: #fff; }
+.status-panel h2 { margin: 0 0 .65rem; font-size: 1.1rem; }
+.status-panel p { margin: 0; line-height: 1.5; }
+.status-panel form { display: grid; gap: .55rem; }
+.status-panel label { margin-top: .55rem; font-weight: 700; }
+.status-panel input { width: 100%; padding: .7rem .8rem; border: 1px solid #849e98; border-radius: .35rem; font: inherit; }
+.status-panel input:focus-visible { outline: 3px solid #e3b45a; outline-offset: 1px; }
+.status-panel form button { justify-self: start; }
+.mode-switch { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+.mode-switch button { margin: 0; }
+.mode-switch button[aria-pressed="false"] { background: #e0eee9; color: #0d6055; }
+.notice { max-width: 38rem; margin: 0 0 1rem; padding: .8rem 1rem; border-radius: .35rem; }
+.notice.success { background: #d9efe5; color: #0a544a; }
+.notice.error { background: #f9e6e2; color: #82382f; }
+button { margin-top: 1rem; padding: .65rem 1rem; border: 0; border-radius: .4rem; background: #0d6055; color: #fff; cursor: pointer; }
+button:hover { background: #084c43; }
+button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }

@@ -5,6 +5,34 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 **Course:** MIT 6.1040 Software Design, Fall 2026
 **Team:** [Team members and working agreement](team.md)
 
+## Current build
+
+The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out through the Vue screen. Group, opening, and gathering features are still being implemented.
+
+### Run locally
+
+Install Bun 1.4.2 and Podman with Compose. Start the Podman machine if needed, then run from the repository root:
+
+```sh
+bun install
+bun install --cwd frontend
+cp .env.example .env
+bun run dev
+```
+
+The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `MONGODB_URL` names the database; production will use the platform-provided connection string and `client.db()`. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
+
+To check the current project and run a production-style preview after MongoDB is up:
+
+```sh
+bun run generate
+bun run check
+bun run test
+bun run preview
+```
+
+The preview serves built Vue files and `/api` from port 3000, with a fallback for Vue deep links. Tests use and reset only the guarded `opentime_accounts_test` database. `bun run db:down` stops the local MongoDB container without deleting its data.
+
 ## Pitch
 
 [View the OpenTime pitch deck](https://docs.google.com/presentation/d/18HX2CHjc31JB2Bg-s9xxSwk-Zex411e68c8fTyNOnxk/edit?usp=sharing)
