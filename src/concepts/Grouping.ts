@@ -174,4 +174,10 @@ export class GroupingConcept {
     const access = await this._accessFor({ user, group });
     return { allowed: access.allowed && invitees.every((invitee) => access.members.includes(invitee)) };
   }
+
+  async _canInviteToGathering({ user, group, invitee }: { user: string; group: string; invitee: string }) {
+    if (user === invitee) return { allowed: false };
+    const access = await this._accessFor({ user, group });
+    return { allowed: access.allowed && access.members.includes(invitee) };
+  }
 }

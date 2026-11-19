@@ -65,6 +65,17 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "GATHERING_CONFLICT" | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
   };
+  "/gatherings/cancel": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["cancel"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["cancel"]>[0], ["version"]>>;
+    };
+    output: {
+      "cancelled": true;
+    };
+    error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
+  };
   "/gatherings/confirm": {
     input: {
       "expectedAttendees": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["expectedAttendees"]>>;
@@ -88,6 +99,22 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
   };
+  "/gatherings/edit": {
+    input: {
+      "activity": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["activity"]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["end"]>>;
+      "expectedVersion": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["expectedVersion"]>>;
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["gathering"]>>;
+      "place": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["place"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["purpose"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["start"]>>;
+    };
+    output: {
+      "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>>, ["version"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_CONFLICT" | "INVALID_GATHERING" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
+  };
   "/gatherings/get": {
     input: {
       "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>>;
@@ -109,6 +136,18 @@ export type OpenTimeWire = {
       "version": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["version"]>>;
     };
     error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/invite": {
+    input: {
+      "gathering": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["gathering"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_contextFor"]>[0], ["gathering"]>]>>;
+      "invitee": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["invitee"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canInviteToGathering"]>[0], ["invitee"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["version"]>>;
+    };
+    output: {
+      "invited": true;
+    };
+    error: { error: AppWideError | "GATHERING_FORBIDDEN" | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
   "/gatherings/list": {
     input: {
@@ -135,6 +174,17 @@ export type OpenTimeWire = {
       "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["version"]>>;
     };
     error: { error: AppWideError | "GATHERING_CONFLICT" | "GROUP_FORBIDDEN" | "INVALID_GATHERING" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/withdraw": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>[0], ["version"]>>;
+    };
+    output: {
+      "status": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>>, ["status"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
   };
   "/groups/accept": {
     input: {
@@ -365,6 +415,16 @@ export type OpenTimeWireHttp = {
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/gatherings/cancel": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["cancel"]>[0], ["gathering"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["cancel"]>[0], ["version"]>>;
+    };
+    output: {
+      "cancelled": true;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/gatherings/confirm": {
     input: {
       "expectedAttendees": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["expectedAttendees"]>>;
@@ -386,6 +446,21 @@ export type OpenTimeWireHttp = {
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/gatherings/edit": {
+    input: {
+      "activity": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["activity"]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["end"]>>;
+      "expectedVersion": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["expectedVersion"]>>;
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["gathering"]>>;
+      "place": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["place"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["purpose"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>[0], ["start"]>>;
+    };
+    output: {
+      "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["edit"]>>, ["version"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/gatherings/get": {
     input: {
       "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>>;
@@ -404,6 +479,17 @@ export type OpenTimeWireHttp = {
       "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["start"]>>;
       "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["status"]>>;
       "version": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["version"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/invite": {
+    input: {
+      "gathering": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["gathering"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_contextFor"]>[0], ["gathering"]>]>>;
+      "invitee": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["invitee"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canInviteToGathering"]>[0], ["invitee"]>]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["invite"]>[0], ["version"]>>;
+    };
+    output: {
+      "invited": true;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
@@ -427,6 +513,16 @@ export type OpenTimeWireHttp = {
     output: {
       "gathering": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["gathering"]>>;
       "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["version"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/withdraw": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>[0], ["gathering"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>[0], ["version"]>>;
+    };
+    output: {
+      "status": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["withdraw"]>>, ["status"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };

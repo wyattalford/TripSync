@@ -7,7 +7,7 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 
 ## Current build
 
-The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create private dated openings, share them with chosen groups, revise or withdraw them, and search for full-group overlaps by purpose and minimum duration. An organizer can propose a gathering to current group members; invitees accept or decline, and the organizer confirms the exact accepted roster. Confirmed commitments are subtracted from overlaps. Editing, late acceptance, and notices remain to be built.
+The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create private dated openings, share them with chosen groups, revise or withdraw them, and search for full-group overlaps by purpose and minimum duration. An organizer can propose a gathering to current group members, invite more members, edit details into a new version, confirm the exact accepted roster, and cancel. Invitees can accept or decline; an accepted invitee can withdraw, and a pending invitee can join an already confirmed plan. Editing requires fresh responses and reconfirmation. Confirmed commitments are subtracted from overlaps. In-app notices remain to be built.
 
 ### Run locally
 
@@ -31,7 +31,7 @@ bun run test
 bun run preview
 ```
 
-The preview serves built Vue files and `/api` from port 3000, with a fallback for Vue deep links. Tests use and reset only the guarded `opentime_accounts_test` database. `bun run db:down` stops the local MongoDB container without deleting its data.
+The preview serves built Vue files and `/api` from port 3000, with a fallback for Vue deep links. Tests use and reset only guarded `opentime_*_test` databases. `bun run db:down` stops the local MongoDB container without deleting its data.
 
 ## Pitch
 

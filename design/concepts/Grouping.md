@@ -149,4 +149,7 @@ _accessFor(user: User, group: Group) : one (allowed: Flag, members: Members)
 
 _canPlanWith(user: User, group: Group, invitees: Members) : one (allowed: Flag)
   Answers true when user and every distinct invitee are active members, the list is nonempty, and user is not an invitee.
+
+_canInviteToGathering(user: User, group: Group, invitee: User) : one (allowed: Flag)
+  Answers true when user and invitee are distinct active members of the group.
 ```

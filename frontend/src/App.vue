@@ -7,7 +7,7 @@ type GroupSummary = { group: string; name: string; owner: string; membership: st
 type Opening = { opening: string; purpose: string; start: string; end: string; audiences: string[] };
 type Interval = { start: string; end: string };
 type Member = { user: string; username: string };
-type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; attendees: string[] };
+type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
 const mode = ref<Mode>("sign-in");
 const username = ref("");
 const password = ref("");
@@ -28,6 +28,7 @@ const searchDuration = ref(60);
 const overlaps = ref<Interval[]>([]);
 const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
+const extraInvitees = ref<Record<string, string>>({});
 const rosters = ref<Record<string, Member[]>>({});
 const proposalGroup = ref("");
 const proposalInvitees = ref<string[]>([]);
@@ -36,6 +37,12 @@ const proposalActivity = ref("");
 const proposalPlace = ref("");
 const proposalStart = ref("");
 const proposalEnd = ref("");
+const editingGathering = ref<GatheringSummary | null>(null);
+const editPurpose = ref("");
+const editActivity = ref("");
+const editPlace = ref("");
+const editStart = ref("");
+const editEnd = ref("");
 const groupName = ref("");
 const joinInput = ref(location.pathname.startsWith("/join/") ? location.href : "");
 const inviteNames = ref<Record<string, string>>({});
@@ -80,7 +87,7 @@ function gatheringError(error: string): string {
   if (error === "UNAUTHORIZED") return "Your session ended. Sign in again.";
   if (error === "FORBIDDEN") return "You are not allowed to change this gathering or invite these people.";
   if (error === "CONFLICT") return "The accepted roster, version, or commitments changed. Refresh the gathering and try again.";
-  if (error === "INVALID_REQUEST") return "Choose invitees, future times, a purpose, activity, and place.";
+  if (error === "INVALID_REQUEST") return "Enter changed details with a valid future time, purpose, activity, and place.";
   return "OpenTime could not complete that request. Try again.";
 }
 
@@ -142,7 +149,46 @@ async function respondGathering(gathering: GatheringSummary, action: "accept" | 
       : await api.gatherings.decline({ gathering: gathering.gathering, version: gathering.version });
     if ("error" in result) return showMessage(gatheringError(result.error), "error");
     await refreshGatherings();
-    showMessage(action === "accept" ? "You accepted this proposal." : "You declined this proposal.", "success");
+    showMessage(action === "decline" ? "You declined these details."
+      : "joined" in result && result.joined ? "You joined the confirmed gathering." : "You accepted these details. The organizer can confirm when ready.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+function beginGatheringEdit(gathering: GatheringSummary) {
+  editingGathering.value = gathering;
+  editPurpose.value = gathering.purpose;
+  editActivity.value = gathering.activity;
+  editPlace.value = gathering.place;
+  editStart.value = localInput(gathering.start);
+  editEnd.value = localInput(gathering.end);
+  document.getElementById("gathering-edit")?.scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelGatheringEdit() { editingGathering.value = null; }
+
+async function saveGatheringEdit() {
+  const previous = editingGathering.value;
+  if (!previous) return;
+  const start = absoluteTime(editStart.value), end = absoluteTime(editEnd.value);
+  const purpose = editPurpose.value.trim(), activity = editActivity.value.trim(), place = editPlace.value.trim();
+  if (!purpose || !activity || !place || !start || !end || start <= new Date().toISOString() || start >= end) {
+    return showMessage("Enter a purpose, activity, place, and valid future time range.", "error");
+  }
+  if (purpose === previous.purpose && activity === previous.activity && place === previous.place
+    && start === previous.start && end === previous.end) return showMessage("Change at least one detail.", "error");
+  if (previous.status === "CONFIRMED" && !window.confirm("Editing releases this confirmed plan. Everyone must accept the new details before you can confirm it again. Continue?")) return;
+  busy.value = true;
+  try {
+    const result = await api.gatherings.edit({ gathering: previous.gathering, expectedVersion: previous.version, purpose, activity, place, start, end });
+    if ("error" in result) {
+      await refreshGatherings();
+      return showMessage(gatheringError(result.error), "error");
+    }
+    cancelGatheringEdit();
+    await refreshGatherings();
+    searched.value = false;
+    showMessage("New version saved. Previous responses and confirmed commitments no longer apply. Invitees need to respond again.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
 }
@@ -157,6 +203,56 @@ async function confirmGathering(gathering: GatheringSummary) {
     }
     await refreshGatherings();
     showMessage("Gathering confirmed for the accepted people.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function inviteToGathering(gathering: GatheringSummary) {
+  const invitee = extraInvitees.value[gathering.gathering];
+  if (!invitee) return showMessage("Choose a current group member to invite.", "error");
+  busy.value = true;
+  try {
+    const result = await api.gatherings.invite({ gathering: gathering.gathering, version: gathering.version, invitee });
+    if ("error" in result) {
+      await refreshGatherings();
+      return showMessage(gatheringError(result.error), "error");
+    }
+    extraInvitees.value[gathering.gathering] = "";
+    await refreshGatherings();
+    showMessage("Invitation added. This person can respond to the current version.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function withdrawFromGathering(gathering: GatheringSummary) {
+  if (!window.confirm("Withdraw your acceptance from this gathering?")) return;
+  busy.value = true;
+  try {
+    const result = await api.gatherings.withdraw({ gathering: gathering.gathering, version: gathering.version });
+    if ("error" in result) {
+      await refreshGatherings();
+      return showMessage(gatheringError(result.error), "error");
+    }
+    await refreshGatherings();
+    searched.value = false;
+    showMessage(result.status === "CANCELLED" ? "You withdrew. The gathering closed because no one else is attending or pending." : "You withdrew from this gathering.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function cancelGathering(gathering: GatheringSummary) {
+  if (!window.confirm("Cancel this gathering for everyone? Confirmed commitments will be released.")) return;
+  busy.value = true;
+  try {
+    const result = await api.gatherings.cancel({ gathering: gathering.gathering, version: gathering.version });
+    if ("error" in result) {
+      await refreshGatherings();
+      return showMessage(gatheringError(result.error), "error");
+    }
+    if (editingGathering.value?.gathering === gathering.gathering) cancelGatheringEdit();
+    await refreshGatherings();
+    searched.value = false;
+    showMessage("Gathering cancelled. Its confirmed commitments were released.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
 }
@@ -592,22 +688,50 @@ onMounted(refreshAccount);
             <p v-if="gatherings.length === 0">No proposals or confirmed gatherings yet.</p>
             <ul v-else class="gathering-list">
               <li v-for="gathering in gatherings" :key="gathering.gathering" class="gathering-card">
-                <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>{{ gathering.status }}</span></div>
+                <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>Version {{ gathering.number }} · {{ gathering.status }}</span></div>
                 <p>{{ gathering.purpose }} · {{ gathering.place }}</p>
                 <p>{{ localTime(gathering.start) }} – {{ localTime(gathering.end) }}</p>
                 <p>Your response: {{ gathering.myResponse.toLowerCase() }}</p>
                 <p>Accepted: {{ gathering.accepted.map((member) => memberName(gathering.context, member)).join(', ') }}</p>
                 <p>Pending: {{ gathering.pending.length }} · Declined: {{ gathering.declined.length }}</p>
-                <div v-if="gathering.status === 'PROPOSED' && gathering.organizer !== currentUser" class="button-row">
-                  <button v-if="gathering.myResponse !== 'ACCEPTED'" type="button" :disabled="busy" @click="respondGathering(gathering, 'accept')">Accept details</button>
+                <p v-if="gathering.status === 'CANCELLED'">This gathering was cancelled. Responses and earlier versions remain on record.</p>
+                <div v-if="(gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED') && gathering.organizer !== currentUser && new Date(gathering.start) > new Date()" class="button-row">
+                  <button v-if="gathering.myResponse !== 'ACCEPTED'" type="button" :disabled="busy" @click="respondGathering(gathering, 'accept')">{{ gathering.status === 'CONFIRMED' ? 'Join confirmed plan' : 'Accept details' }}</button>
                   <button v-if="gathering.myResponse === 'PENDING'" type="button" class="secondary" :disabled="busy" @click="respondGathering(gathering, 'decline')">Decline</button>
+                  <button v-if="gathering.myResponse === 'ACCEPTED'" type="button" class="secondary" :disabled="busy" @click="withdrawFromGathering(gathering)">Withdraw</button>
                 </div>
-                <button v-if="gathering.status === 'PROPOSED' && gathering.organizer === currentUser && gathering.accepted.length > 1" type="button" :disabled="busy" @click="confirmGathering(gathering)">Confirm accepted roster</button>
+                <div v-if="gathering.organizer === currentUser && new Date(gathering.start) > new Date()" class="button-row">
+                  <button v-if="gathering.status === 'PROPOSED' && gathering.accepted.length > 1" type="button" :disabled="busy" @click="confirmGathering(gathering)">Confirm accepted roster</button>
+                  <button v-if="gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED'" type="button" class="secondary" :disabled="busy" @click="beginGatheringEdit(gathering)">Edit details</button>
+                  <button v-if="gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED'" type="button" class="secondary" :disabled="busy" @click="cancelGathering(gathering)">Cancel gathering</button>
+                </div>
+                <form v-if="gathering.organizer === currentUser && (gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED') && new Date(gathering.start) > new Date()" class="invite-extra" @submit.prevent="inviteToGathering(gathering)">
+                  <label :for="`extra-${gathering.gathering}`">Invite another group member</label>
+                  <select :id="`extra-${gathering.gathering}`" v-model="extraInvitees[gathering.gathering]" :disabled="busy" required>
+                    <option value="" disabled>Choose a person</option>
+                    <option v-for="member in (rosters[gathering.context] ?? []).filter((item) => item.user !== currentUser && (!gathering.invitees.includes(item.user) || gathering.declined.includes(item.user) || gathering.withdrawn.includes(item.user)))" :key="member.user" :value="member.user">{{ member.username }}</option>
+                  </select>
+                  <button type="submit" class="secondary" :disabled="busy">Send invitation</button>
+                </form>
               </li>
             </ul>
             <button type="button" class="secondary" :disabled="busy" @click="refreshGatherings">Refresh responses</button>
           </section>
         </div>
+        <section v-if="editingGathering" id="gathering-edit" class="status-panel gathering-edit-panel">
+          <h3>Edit {{ editingGathering.activity }} · version {{ editingGathering.number }}</h3>
+          <p>Saving creates a new version. Every invitee must respond to its details again. If this plan is confirmed, saving releases its current commitments until you reconfirm.</p>
+          <form @submit.prevent="saveGatheringEdit">
+            <label for="edit-purpose">Purpose</label><input id="edit-purpose" v-model="editPurpose" :disabled="busy" required />
+            <label for="edit-activity">Activity</label><input id="edit-activity" v-model="editActivity" :disabled="busy" required />
+            <label for="edit-place">Place</label><input id="edit-place" v-model="editPlace" :disabled="busy" required />
+            <div class="time-fields">
+              <div><label for="edit-start">From</label><input id="edit-start" v-model="editStart" type="datetime-local" :disabled="busy" required /></div>
+              <div><label for="edit-end">Until</label><input id="edit-end" v-model="editEnd" type="datetime-local" :disabled="busy" required /></div>
+            </div>
+            <div class="button-row"><button type="submit" :disabled="busy">Save new version</button><button type="button" class="secondary" :disabled="busy" @click="cancelGatheringEdit">Cancel edit</button></div>
+          </form>
+        </section>
       </section>
       <section v-else class="status-panel">
         <div class="mode-switch" aria-label="Account action">
