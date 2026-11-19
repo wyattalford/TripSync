@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { api } from "./api.ts";
 
 type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
 type Opening = { opening: string; purpose: string; start: string; end: string; audiences: string[] };
 type Interval = { start: string; end: string };
+type Member = { user: string; username: string };
+type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; attendees: string[] };
 const mode = ref<Mode>("sign-in");
 const username = ref("");
 const password = ref("");
@@ -25,6 +27,15 @@ const searchTo = ref("");
 const searchDuration = ref(60);
 const overlaps = ref<Interval[]>([]);
 const searched = ref(false);
+const gatherings = ref<GatheringSummary[]>([]);
+const rosters = ref<Record<string, Member[]>>({});
+const proposalGroup = ref("");
+const proposalInvitees = ref<string[]>([]);
+const proposalPurpose = ref("");
+const proposalActivity = ref("");
+const proposalPlace = ref("");
+const proposalStart = ref("");
+const proposalEnd = ref("");
 const groupName = ref("");
 const joinInput = ref(location.pathname.startsWith("/join/") ? location.href : "");
 const inviteNames = ref<Record<string, string>>({});
@@ -64,6 +75,93 @@ function openingError(error: string): string {
   if (error === "INVALID_REQUEST") return "Enter a purpose and a valid time range that has not ended.";
   return "OpenTime could not complete that request. Try again.";
 }
+
+function gatheringError(error: string): string {
+  if (error === "UNAUTHORIZED") return "Your session ended. Sign in again.";
+  if (error === "FORBIDDEN") return "You are not allowed to change this gathering or invite these people.";
+  if (error === "CONFLICT") return "The accepted roster, version, or commitments changed. Refresh the gathering and try again.";
+  if (error === "INVALID_REQUEST") return "Choose invitees, future times, a purpose, activity, and place.";
+  return "OpenTime could not complete that request. Try again.";
+}
+
+function memberName(group: string, user: string): string {
+  return rosters.value[group]?.find((member) => member.user === user)?.username ?? (user === currentUser.value ? currentUsername.value : "Former member");
+}
+
+async function loadRoster(group: string) {
+  if (!group) return;
+  const result = await api.groups.members({ group });
+  if ("error" in result) {
+    showMessage(groupError(result.error), "error");
+    rosters.value[group] = [];
+  } else rosters.value[group] = result.accounts;
+}
+
+async function refreshGatherings() {
+  const result = await api.gatherings.list();
+  if ("error" in result) return showMessage(gatheringError(result.error), "error");
+  gatherings.value = result.gatherings;
+  await Promise.all([...new Set(result.gatherings.map((gathering) => gathering.context))].map((group) => loadRoster(group)));
+}
+
+function proposeFromOverlap(interval: Interval) {
+  proposalGroup.value = searchGroup.value;
+  proposalPurpose.value = searchPurpose.value.trim();
+  proposalStart.value = localInput(interval.start);
+  proposalEnd.value = localInput(interval.end);
+  document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
+}
+
+async function proposeGathering() {
+  const start = absoluteTime(proposalStart.value), end = absoluteTime(proposalEnd.value);
+  if (!proposalGroup.value || proposalInvitees.value.length === 0 || !proposalPurpose.value.trim() || !proposalActivity.value.trim()
+    || !proposalPlace.value.trim() || !start || !end || start <= new Date().toISOString() || start >= end) {
+    return showMessage("Choose invitees, future times, a purpose, activity, and place.", "error");
+  }
+  busy.value = true;
+  try {
+    const result = await api.gatherings.propose({ group: proposalGroup.value, invitees: proposalInvitees.value,
+      purpose: proposalPurpose.value.trim(), activity: proposalActivity.value.trim(), place: proposalPlace.value.trim(), start, end });
+    if ("error" in result) return showMessage(gatheringError(result.error), "error");
+    proposalInvitees.value = [];
+    proposalActivity.value = "";
+    proposalPlace.value = "";
+    proposalStart.value = "";
+    proposalEnd.value = "";
+    await refreshGatherings();
+    showMessage("Proposal sent. Invitees can accept or decline these details.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function respondGathering(gathering: GatheringSummary, action: "accept" | "decline") {
+  busy.value = true;
+  try {
+    const result = action === "accept"
+      ? await api.gatherings.accept({ gathering: gathering.gathering, version: gathering.version })
+      : await api.gatherings.decline({ gathering: gathering.gathering, version: gathering.version });
+    if ("error" in result) return showMessage(gatheringError(result.error), "error");
+    await refreshGatherings();
+    showMessage(action === "accept" ? "You accepted this proposal." : "You declined this proposal.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+async function confirmGathering(gathering: GatheringSummary) {
+  busy.value = true;
+  try {
+    const result = await api.gatherings.confirm({ gathering: gathering.gathering, version: gathering.version, expectedAttendees: gathering.accepted });
+    if ("error" in result) {
+      await refreshGatherings();
+      return showMessage(gatheringError(result.error), "error");
+    }
+    await refreshGatherings();
+    showMessage("Gathering confirmed for the accepted people.", "success");
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
+}
+
+watch(proposalGroup, (group) => { proposalInvitees.value = []; void loadRoster(group); });
 
 function localTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -181,12 +279,13 @@ async function refreshAccount() {
     const result = await api.auth.current();
     currentUsername.value = "error" in result ? "" : result.username;
     currentUser.value = "error" in result ? "" : result.user;
-    if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings()]);
+    if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings(), refreshGatherings()]);
   } catch {
     currentUsername.value = "";
     currentUser.value = "";
     groups.value = [];
     openings.value = [];
+    gatherings.value = [];
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
     loading.value = false;
@@ -321,6 +420,7 @@ async function signOut() {
     currentUser.value = "";
     groups.value = [];
     openings.value = [];
+    gatherings.value = [];
     showMessage("Signed out.", "success");
   } catch {
     showMessage("OpenTime could not reach the server. Try again.", "error");
@@ -455,9 +555,59 @@ onMounted(refreshAccount);
           <div v-if="searched" class="overlap-results" aria-live="polite">
             <h4>Shared openings</h4>
             <p v-if="overlaps.length === 0">No shared time in this range yet. Everyone in the group needs a matching opening.</p>
-            <ul v-else><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}</li></ul>
+            <ul v-else><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}
+              <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
+            </li></ul>
           </div>
         </section>
+        <div class="gathering-layout">
+          <section class="status-panel" id="proposal-form">
+            <h3>Propose a gathering</h3>
+            <p>Choose current group members and specific details. A shared opening does not count as acceptance.</p>
+            <form @submit.prevent="proposeGathering">
+              <label for="proposal-group">Group</label>
+              <select id="proposal-group" v-model="proposalGroup" :disabled="busy" required>
+                <option value="" disabled>Choose a group</option>
+                <option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option>
+              </select>
+              <fieldset class="group-choices">
+                <legend>Invite people</legend>
+                <p v-if="proposalGroup && (rosters[proposalGroup] ?? []).filter((member) => member.user !== currentUser).length === 0">This group needs another member before you can propose.</p>
+                <label v-for="member in (rosters[proposalGroup] ?? []).filter((item) => item.user !== currentUser)" :key="member.user" class="check-row">
+                  <input v-model="proposalInvitees" type="checkbox" :value="member.user" :disabled="busy" />{{ member.username }}
+                </label>
+              </fieldset>
+              <label for="proposal-purpose">Purpose</label><input id="proposal-purpose" v-model="proposalPurpose" placeholder="e.g. watching a movie" :disabled="busy" required />
+              <label for="proposal-activity">Activity</label><input id="proposal-activity" v-model="proposalActivity" placeholder="e.g. Star Wars" :disabled="busy" required />
+              <label for="proposal-place">Place</label><input id="proposal-place" v-model="proposalPlace" placeholder="e.g. dorm lounge" :disabled="busy" required />
+              <div class="time-fields">
+                <div><label for="proposal-start">From</label><input id="proposal-start" v-model="proposalStart" type="datetime-local" :disabled="busy" required /></div>
+                <div><label for="proposal-end">Until</label><input id="proposal-end" v-model="proposalEnd" type="datetime-local" :disabled="busy" required /></div>
+              </div>
+              <button type="submit" :disabled="busy">Send proposal</button>
+            </form>
+          </section>
+          <section class="status-panel">
+            <h3>Your gatherings</h3>
+            <p v-if="gatherings.length === 0">No proposals or confirmed gatherings yet.</p>
+            <ul v-else class="gathering-list">
+              <li v-for="gathering in gatherings" :key="gathering.gathering" class="gathering-card">
+                <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>{{ gathering.status }}</span></div>
+                <p>{{ gathering.purpose }} · {{ gathering.place }}</p>
+                <p>{{ localTime(gathering.start) }} – {{ localTime(gathering.end) }}</p>
+                <p>Your response: {{ gathering.myResponse.toLowerCase() }}</p>
+                <p>Accepted: {{ gathering.accepted.map((member) => memberName(gathering.context, member)).join(', ') }}</p>
+                <p>Pending: {{ gathering.pending.length }} · Declined: {{ gathering.declined.length }}</p>
+                <div v-if="gathering.status === 'PROPOSED' && gathering.organizer !== currentUser" class="button-row">
+                  <button v-if="gathering.myResponse !== 'ACCEPTED'" type="button" :disabled="busy" @click="respondGathering(gathering, 'accept')">Accept details</button>
+                  <button v-if="gathering.myResponse === 'PENDING'" type="button" class="secondary" :disabled="busy" @click="respondGathering(gathering, 'decline')">Decline</button>
+                </div>
+                <button v-if="gathering.status === 'PROPOSED' && gathering.organizer === currentUser && gathering.accepted.length > 1" type="button" :disabled="busy" @click="confirmGathering(gathering)">Confirm accepted roster</button>
+              </li>
+            </ul>
+            <button type="button" class="secondary" :disabled="busy" @click="refreshGatherings">Refresh responses</button>
+          </section>
+        </div>
       </section>
       <section v-else class="status-panel">
         <div class="mode-switch" aria-label="Account action">

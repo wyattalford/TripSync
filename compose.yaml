@@ -1,6 +1,16 @@
 services:
   mongo:
     image: docker.io/library/mongo:8.0
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        if [ ! -f /data/db/replica-keyfile ]; then
+          openssl rand -base64 756 > /data/db/replica-keyfile
+          chmod 400 /data/db/replica-keyfile
+          chown mongodb:mongodb /data/db/replica-keyfile
+        fi
+        exec /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /data/db/replica-keyfile
     environment:
       MONGO_INITDB_ROOT_USERNAME: dev
       MONGO_INITDB_ROOT_PASSWORD: dev

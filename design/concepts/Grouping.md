@@ -146,4 +146,7 @@ _canShareWith(user: User, groups: GroupIds) : one (allowed: Flag)
 
 _accessFor(user: User, group: Group) : one (allowed: Flag, members: Members)
   Returns allowed true and current members only for an active member; otherwise false and an empty member set.
+
+_canPlanWith(user: User, group: Group, invitees: Members) : one (allowed: Flag)
+  Answers true when user and every distinct invitee are active members, the list is nonempty, and user is not an invitee.
 ```

@@ -7,7 +7,7 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 
 ## Current build
 
-The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create private dated openings, share them with chosen groups, revise or withdraw them, and search for full-group overlaps by purpose and minimum duration. Confirmed gathering commitments are not yet subtracted because Gathering is still being implemented; the notice inbox also remains to be built.
+The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create private dated openings, share them with chosen groups, revise or withdraw them, and search for full-group overlaps by purpose and minimum duration. An organizer can propose a gathering to current group members; invitees accept or decline, and the organizer confirms the exact accepted roster. Confirmed commitments are subtracted from overlaps. Editing, late acceptance, and notices remain to be built.
 
 ### Run locally
 
@@ -20,7 +20,7 @@ cp .env.example .env
 bun run dev
 ```
 
-The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `MONGODB_URL` names the database; production will use the platform-provided connection string and `client.db()`. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
+The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `bun run db:up` initializes an authenticated single-node replica set for transaction tests without clearing the existing MongoDB volume. The local URI uses `directConnection=true` and `replicaSet=rs0`; copy the current `.env.example` if an older `.env` lacks those options. `MONGODB_URL` names the database; production uses the platform-provided connection string and `client.db()`. The hosted database must support MongoDB transactions before confirmation can be deployed. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
 
 To check the current project and run a production-style preview after MongoDB is up:
 

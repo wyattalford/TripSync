@@ -24,7 +24,7 @@
     "dev": "bun run db:up && bun run --parallel dev:backend dev:frontend",
     "dev:backend": "bun --watch src/main.ts",
     "dev:frontend": "bun run --cwd frontend dev",
-    "db:up": "podman compose up -d mongo",
+    "db:up": "sh scripts/start-mongo.sh",
     "db:down": "podman compose down"
   }
 }

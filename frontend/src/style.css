@@ -78,5 +78,13 @@ button.secondary:hover { background: #cce3da; }
 .overlap-results { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #d6dfdb; }
 .overlap-results h4 { margin: 0 0 .6rem; }
 .overlap-results ul { margin: 0; padding-left: 1.3rem; line-height: 1.8; }
+.overlap-results li button { margin: 0 .4rem; font-size: .85rem; }
+.gathering-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1.25rem; margin-top: 2rem; }
+.gathering-layout .status-panel { max-width: none; }
+.gathering-layout .status-panel > p { margin-bottom: 1rem; }
+.gathering-list { display: grid; gap: .8rem; list-style: none; margin: 1rem 0; padding: 0; }
+.gathering-card { padding: 1rem; border: 1px solid #d6dfdb; border-radius: .5rem; }
+.gathering-card p { margin: .45rem 0; font-size: .92rem; }
+.gathering-card .button-row button { margin-top: .6rem; }
 @media (max-width: 48rem) { .group-layout { grid-template-columns: 1fr; } .content { padding-top: 2.5rem; } }
-@media (max-width: 42rem) { .opening-layout, .time-fields, .search-fields { grid-template-columns: 1fr; } }
+@media (max-width: 42rem) { .opening-layout, .gathering-layout, .time-fields, .search-fields { grid-template-columns: 1fr; } }

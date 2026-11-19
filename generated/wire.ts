@@ -54,6 +54,88 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/gatherings/accept": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>[0], ["version"]>>;
+    };
+    output: {
+      "joined": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>>, ["joined"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_CONFLICT" | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/confirm": {
+    input: {
+      "expectedAttendees": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["expectedAttendees"]>>;
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["version"]>>;
+    };
+    output: {
+      "attendees": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>>, ["attendees"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_CONFLICT" | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/decline": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["decline"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["decline"]>[0], ["version"]>>;
+    };
+    output: {
+      "declined": true;
+    };
+    error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "STALE_GATHERING" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/get": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "accepted": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["accepted"]>>;
+      "activity": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["activity"]>>;
+      "attendees": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["attendees"]>>;
+      "context": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["context"]>>;
+      "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["end"]>>;
+      "gathering": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>[0], ["gathering"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>]>>;
+      "invitees": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["invitees"]>>;
+      "organizer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["organizer"]>>;
+      "place": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["place"]>>;
+      "purpose": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["purpose"]>>;
+      "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["start"]>>;
+      "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["status"]>>;
+      "version": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["version"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/list": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "gatherings": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_listFor"]>>>, ["gatherings"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/gatherings/propose": {
+    input: {
+      "activity": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["activity"]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["end"]>>;
+      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["context"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canPlanWith"]>[0], ["group"]>]>>;
+      "invitees": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["invitees"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canPlanWith"]>[0], ["invitees"]>]>>;
+      "place": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["place"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["purpose"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["start"]>>;
+    };
+    output: {
+      "gathering": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["gathering"]>>;
+      "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["version"]>>;
+    };
+    error: { error: AppWideError | "GATHERING_CONFLICT" | "GROUP_FORBIDDEN" | "INVALID_GATHERING" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/groups/accept": {
     input: {
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["accept"]>[0], ["group"]>>;
@@ -144,6 +226,16 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/groups/members": {
+    input: {
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "accounts": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_usernames"]>>>, ["accounts"]>>;
+    };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/groups/remove": {
     input: {
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["remove"]>[0], ["group"]>>;
@@ -179,11 +271,11 @@ export type OpenTimeWire = {
   "/openings/overlap": {
     input: {
       "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
-      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>]>>;
+      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["from"]>]>>;
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
       "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
-      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>]>>;
+      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["to"]>]>>;
     };
     output: {
       "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;
@@ -262,6 +354,81 @@ export type OpenTimeWireHttp = {
       "signedOut": true;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/accept": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>[0], ["gathering"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>[0], ["version"]>>;
+    };
+    output: {
+      "joined": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["accept"]>>, ["joined"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/confirm": {
+    input: {
+      "expectedAttendees": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["expectedAttendees"]>>;
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["gathering"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>[0], ["version"]>>;
+    };
+    output: {
+      "attendees": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["confirm"]>>, ["attendees"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/decline": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["decline"]>[0], ["gathering"]>>;
+      "version": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["decline"]>[0], ["version"]>>;
+    };
+    output: {
+      "declined": true;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/get": {
+    input: {
+      "gathering": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>>;
+    };
+    output: {
+      "accepted": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["accepted"]>>;
+      "activity": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["activity"]>>;
+      "attendees": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["attendees"]>>;
+      "context": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["context"]>>;
+      "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["end"]>>;
+      "gathering": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>[0], ["gathering"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_visibleTo"]>[0], ["gathering"]>]>>;
+      "invitees": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["invitees"]>>;
+      "organizer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["organizer"]>>;
+      "place": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["place"]>>;
+      "purpose": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["purpose"]>>;
+      "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["start"]>>;
+      "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["status"]>>;
+      "version": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_get"]>>>, ["version"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/list": {
+    input: Record<string, never>;
+    output: {
+      "gatherings": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["_listFor"]>>>, ["gatherings"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/gatherings/propose": {
+    input: {
+      "activity": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["activity"]>>;
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["end"]>>;
+      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["context"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canPlanWith"]>[0], ["group"]>]>>;
+      "invitees": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["invitees"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_canPlanWith"]>[0], ["invitees"]>]>>;
+      "place": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["place"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["purpose"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>[0], ["start"]>>;
+    };
+    output: {
+      "gathering": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["gathering"]>>;
+      "version": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Gathering"]["propose"]>>, ["version"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/groups/accept": {
     input: {
@@ -343,6 +510,15 @@ export type OpenTimeWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/groups/members": {
+    input: {
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
+    };
+    output: {
+      "accounts": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_usernames"]>>>, ["accounts"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/groups/remove": {
     input: {
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["remove"]>[0], ["group"]>>;
@@ -374,10 +550,10 @@ export type OpenTimeWireHttp = {
   "/openings/overlap": {
     input: {
       "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
-      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>]>>;
+      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["from"]>]>>;
       "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
       "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
-      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>]>>;
+      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["to"]>]>>;
     };
     output: {
       "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;

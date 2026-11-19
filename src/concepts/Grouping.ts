@@ -168,4 +168,10 @@ export class GroupingConcept {
     return { allowed: true, members: Object.entries(found.memberships)
       .filter(([, status]) => status === "MEMBER").map(([member]) => member) };
   }
+
+  async _canPlanWith({ user, group, invitees }: { user: string; group: string; invitees: string[] }) {
+    if (invitees.length === 0 || new Set(invitees).size !== invitees.length || invitees.includes(user)) return { allowed: false };
+    const access = await this._accessFor({ user, group });
+    return { allowed: access.allowed && invitees.every((invitee) => access.members.includes(invitee)) };
+  }
 }

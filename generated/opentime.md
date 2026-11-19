@@ -29,10 +29,11 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 - `_exists(user: User) : one (exists: Flag)`
 - `_byUsername(username: String) : optional (user: User)`
 - `_username(user: User) : optional (username: String)`
+- `_usernames(users: UserSet) : one (accounts: AccountLabels)`
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 10.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 11.
 
 ### AvailabilitySharing
 
@@ -61,9 +62,43 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 
 #### Instances
 
-- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 14.
-  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 16.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 15.
+- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 15.
+  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 17.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 16.
+
+### Gathering
+
+Defined in [Gathering](../design/concepts/Gathering.md), line 1.
+
+#### Actions
+
+- `propose(organizer: User, context: Context, invitees: Invitees, purpose: String, activity: String, place: String, start: DateTime, end: DateTime) : returns (gathering: Gathering, version: Version)`
+  - Refuses `INVALID_GATHERING`: Choose invitees and valid future gathering details.
+  - Refuses `GATHERING_CONFLICT`: A participant has a conflicting confirmed gathering.
+- `accept(user: User, gathering: Gathering, version: Version) : returns (joined: Flag, affectedUsers: AffectedUsers)`
+  - Refuses `STALE_GATHERING`: Refresh to review the current gathering.
+  - Refuses `GATHERING_FORBIDDEN`: You cannot respond to this invitation.
+  - Refuses `GATHERING_CONFLICT`: A participant has a conflicting confirmed gathering.
+- `decline(user: User, gathering: Gathering, version: Version) : returns ()`
+  - Refuses `STALE_GATHERING`: Refresh to review the current gathering.
+  - Refuses `GATHERING_FORBIDDEN`: You cannot respond to this invitation.
+- `confirm(user: User, gathering: Gathering, version: Version, expectedAttendees: Attendees) : returns (attendees: Attendees)`
+  - Refuses `GATHERING_FORBIDDEN`: Only the organizer can confirm.
+  - Refuses `STALE_GATHERING`: Refresh the accepted roster before confirming.
+  - Refuses `GATHERING_CONFLICT`: A participant has a conflicting confirmed gathering.
+
+#### Queries
+
+- `_get(gathering: Gathering) : optional (organizer: User, context: Context, version: Version, purpose: String, activity: String, place: String, start: DateTime, end: DateTime, status: GatheringStatus, invitees: Invitees, accepted: Attendees, attendees: Attendees)`
+- `_visibleTo(user: User, gathering: Gathering) : one (allowed: Flag)`
+- `_listFor(user: User) : one (gatherings: GatheringSummaries)`
+- `_commitmentsFor(users: Invitees, from: DateTime, to: DateTime, now: DateTime) : one (commitments: CommitmentIntervals)`
+
+#### Instances
+
+- `Gathering` — instance of `Gathering` — [Application types](../design/types.md), line 19.
+  - `Context` is `Grouping.Group` — [Application types](../design/types.md), line 21.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 20.
 
 ### Grouping
 
@@ -99,11 +134,12 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 - `_visibleFor(user: User) : one (groups: GroupSummaries)`
 - `_canShareWith(user: User, groups: GroupIds) : one (allowed: Flag)`
 - `_accessFor(user: User, group: Group) : one (allowed: Flag, members: Members)`
+- `_canPlanWith(user: User, group: Group, invitees: Members) : one (allowed: Flag)`
 
 #### Instances
 
-- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 11.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 12.
+- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 12.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 13.
 
 ## Computations
 
@@ -236,6 +272,252 @@ then
   RequestBoundary.respond (requestId, signedOut: true)
 ```
 
+### OpenTime.Gatherings.Accept
+
+Authored path: `OpenTime.Gatherings.Accept`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 9.
+
+```reaction
+when RequestBoundary.request (gathering, path: "/gatherings/accept", requestId, session, version)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.Accept#2
+
+Authored path: `OpenTime.Gatherings.Accept`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 9.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Accept
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/accept", requestId, session, version)
+then
+  Gathering.accept (gathering, user, version)
+```
+
+### OpenTime.Gatherings.Accept#3
+
+Authored path: `OpenTime.Gatherings.Accept`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 9.
+
+```reaction
+when Gathering.accept (gathering, user, version, affectedUsers, joined), asked by OpenTime.Gatherings.Accept#2
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/accept", requestId, session, version)
+then
+  RequestBoundary.respond (joined, requestId)
+```
+
+### OpenTime.Gatherings.Confirm
+
+Authored path: `OpenTime.Gatherings.Confirm`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 11.
+
+```reaction
+when RequestBoundary.request (expectedAttendees, gathering, path: "/gatherings/confirm", requestId, session, version)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.Confirm#2
+
+Authored path: `OpenTime.Gatherings.Confirm`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 11.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Confirm
+where
+  earlier, RequestBoundary.request (expectedAttendees, gathering, path: "/gatherings/confirm", requestId, session, version)
+then
+  Gathering.confirm (expectedAttendees, gathering, user, version)
+```
+
+### OpenTime.Gatherings.Confirm#3
+
+Authored path: `OpenTime.Gatherings.Confirm`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 11.
+
+```reaction
+when Gathering.confirm (expectedAttendees, gathering, user, version, attendees), asked by OpenTime.Gatherings.Confirm#2
+where
+  earlier, RequestBoundary.request (expectedAttendees, gathering, path: "/gatherings/confirm", requestId, session, version)
+then
+  RequestBoundary.respond (attendees, requestId)
+```
+
+### OpenTime.Gatherings.Decline
+
+Authored path: `OpenTime.Gatherings.Decline`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 10.
+
+```reaction
+when RequestBoundary.request (gathering, path: "/gatherings/decline", requestId, session, version)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.Decline#2
+
+Authored path: `OpenTime.Gatherings.Decline`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 10.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Decline
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/decline", requestId, session, version)
+then
+  Gathering.decline (gathering, user, version)
+```
+
+### OpenTime.Gatherings.Decline#3
+
+Authored path: `OpenTime.Gatherings.Decline`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 10.
+
+```reaction
+when Gathering.decline (gathering, user, version), asked by OpenTime.Gatherings.Decline#2
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/decline", requestId, session, version)
+then
+  RequestBoundary.respond (declined: true, requestId)
+```
+
+### OpenTime.Gatherings.Get
+
+Authored path: `OpenTime.Gatherings.Get`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 13.
+
+```reaction
+when RequestBoundary.request (gathering, path: "/gatherings/get", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.Get:outsider#2
+
+Authored path: `OpenTime.Gatherings.Get`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 13.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Get
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/get", requestId, session)
+  Gathering._visibleTo (gathering, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GATHERING_FORBIDDEN", requestId)
+```
+
+### OpenTime.Gatherings.Get:participant#2
+
+Authored path: `OpenTime.Gatherings.Get`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 13.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Get
+where
+  earlier, RequestBoundary.request (gathering, path: "/gatherings/get", requestId, session)
+  Gathering._visibleTo (gathering, user) has (allowed: true)
+  Gathering._get (gathering) has (accepted, activity, attendees, context, end, invitees, organizer, place, purpose, start, status, version)
+then
+  RequestBoundary.respond (accepted, activity, attendees, context, end, gathering, invitees, organizer, place, purpose, requestId, start, status, version)
+```
+
+### OpenTime.Gatherings.List
+
+Authored path: `OpenTime.Gatherings.List`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 12.
+
+```reaction
+when RequestBoundary.request (path: "/gatherings/list", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.List#2
+
+Authored path: `OpenTime.Gatherings.List`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 12.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.List
+where
+  Gathering._listFor (user) has (gatherings)
+  earlier, RequestBoundary.request (path: "/gatherings/list", requestId, session)
+then
+  RequestBoundary.respond (gatherings, requestId)
+```
+
+### OpenTime.Gatherings.Propose
+
+Authored path: `OpenTime.Gatherings.Propose`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 8.
+
+```reaction
+when RequestBoundary.request (activity, end, group, invitees, path: "/gatherings/propose", place, purpose, requestId, session, start)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Gatherings.Propose:eligible#2
+
+Authored path: `OpenTime.Gatherings.Propose`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 8.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Propose
+where
+  earlier, RequestBoundary.request (activity, end, group, invitees, path: "/gatherings/propose", place, purpose, requestId, session, start)
+  Grouping._canPlanWith (group, invitees, user) has (allowed: true)
+then
+  Gathering.propose (activity, context: group, end, invitees, organizer: user, place, purpose, start)
+```
+
+### OpenTime.Gatherings.Propose:eligible#3
+
+Authored path: `OpenTime.Gatherings.Propose`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 8.
+
+```reaction
+when Gathering.propose (activity, context: group, end, invitees, organizer: user, place, purpose, start, gathering, version), asked by OpenTime.Gatherings.Propose:eligible#2
+where
+  earlier, RequestBoundary.request (activity, end, group, invitees, path: "/gatherings/propose", place, purpose, requestId, session, start)
+then
+  RequestBoundary.respond (gathering, requestId, version)
+```
+
+### OpenTime.Gatherings.Propose:ineligible#2
+
+Authored path: `OpenTime.Gatherings.Propose`.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 5.
+- Covered by [Gatherings composition](../design/compositions/Gatherings.md), line 8.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Gatherings.Propose
+where
+  earlier, RequestBoundary.request (activity, end, group, invitees, path: "/gatherings/propose", place, purpose, requestId, session, start)
+  Grouping._canPlanWith (group, invitees, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
 ### OpenTime.Groups.Accept
 
 Authored path: `OpenTime.Groups.Accept`.
@@ -280,7 +562,7 @@ then
 
 Authored path: `OpenTime.Groups.Close`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 18.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/close", requestId, session)
@@ -292,7 +574,7 @@ then
 
 Authored path: `OpenTime.Groups.Close`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 18.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Close
@@ -306,7 +588,7 @@ then
 
 Authored path: `OpenTime.Groups.Close`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 18.
 
 ```reaction
 when Grouping.close (group, user), asked by OpenTime.Groups.Close#2
@@ -496,7 +778,7 @@ then
 
 Authored path: `OpenTime.Groups.Leave`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/leave", requestId, session)
@@ -508,7 +790,7 @@ then
 
 Authored path: `OpenTime.Groups.Leave`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Leave
@@ -522,7 +804,7 @@ then
 
 Authored path: `OpenTime.Groups.Leave`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
 
 ```reaction
 when Grouping.leave (group, user), asked by OpenTime.Groups.Leave#2
@@ -536,7 +818,7 @@ then
 
 Authored path: `OpenTime.Groups.Link`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/link", requestId, session)
@@ -548,7 +830,7 @@ then
 
 Authored path: `OpenTime.Groups.Link`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Link
@@ -563,7 +845,7 @@ then
 
 Authored path: `OpenTime.Groups.Link`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Link
@@ -579,7 +861,7 @@ then
 
 Authored path: `OpenTime.Groups.Link`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 15.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Link
@@ -618,11 +900,54 @@ then
   RequestBoundary.respond (groups, requestId)
 ```
 
+### OpenTime.Groups.Members
+
+Authored path: `OpenTime.Groups.Members`.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 5.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+
+```reaction
+when RequestBoundary.request (group, path: "/groups/members", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Groups.Members:member#2
+
+Authored path: `OpenTime.Groups.Members`.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 5.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Members
+where
+  earlier, RequestBoundary.request (group, path: "/groups/members", requestId, session)
+  Grouping._accessFor (group, user) has (allowed: true, members)
+  Authenticating._usernames (users: members) has (accounts)
+then
+  RequestBoundary.respond (accounts, requestId)
+```
+
+### OpenTime.Groups.Members:not-member#2
+
+Authored path: `OpenTime.Groups.Members`.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 5.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 14.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Members
+where
+  earlier, RequestBoundary.request (group, path: "/groups/members", requestId, session)
+  Grouping._accessFor (group, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
 ### OpenTime.Groups.Remove
 
 Authored path: `OpenTime.Groups.Remove`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/remove", requestId, session, username)
@@ -634,7 +959,7 @@ then
 
 Authored path: `OpenTime.Groups.Remove`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Remove
@@ -649,7 +974,7 @@ then
 
 Authored path: `OpenTime.Groups.Remove`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
 
 ```reaction
 when Grouping.remove (group, member, user), asked by OpenTime.Groups.Remove:account-exists#2
@@ -663,7 +988,7 @@ then
 
 Authored path: `OpenTime.Groups.Remove`.
 - Covered by [Groups composition](../design/compositions/Groups.md), line 5.
-- Covered by [Groups composition](../design/compositions/Groups.md), line 16.
+- Covered by [Groups composition](../design/compositions/Groups.md), line 17.
 
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Groups.Remove
@@ -739,7 +1064,8 @@ where
   earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
   Grouping._accessFor (group, user) has (allowed: true, members)
   AvailabilitySharing._sharedSnapshot (audience: group, from, now: instant, purpose, to) has (intervals)
-  overlaps is fullGroupOverlaps (commitments: [], durationMinutes: duration, from, members, now: instant, openings: intervals, to)
+  Gathering._commitmentsFor (from, now: instant, to, users: members) has (commitments)
+  overlaps is fullGroupOverlaps (commitments, durationMinutes: duration, from, members, now: instant, openings: intervals, to)
 then
   RequestBoundary.respond (overlaps, requestId)
 ```
@@ -949,6 +1275,12 @@ not listed here have no explicit input contract.
 - `/auth/register` — requires `username`, `password`
 - `/auth/sign-in` — requires `username`, `password`
 - `/auth/sign-out` — requires `session`
+- `/gatherings/accept` — requires `session`, `gathering`, `version`
+- `/gatherings/confirm` — requires `session`, `gathering`, `version`, `expectedAttendees`
+- `/gatherings/decline` — requires `session`, `gathering`, `version`
+- `/gatherings/get` — requires `session`, `gathering`
+- `/gatherings/list` — requires `session`
+- `/gatherings/propose` — requires `session`, `group`, `invitees`, `purpose`, `activity`, `place`, `start`, `end`
 - `/groups/accept` — requires `session`, `group`
 - `/groups/close` — requires `session`, `group`
 - `/groups/create` — requires `session`, `name`
@@ -958,6 +1290,7 @@ not listed here have no explicit input contract.
 - `/groups/leave` — requires `session`, `group`
 - `/groups/link` — requires `session`, `group`
 - `/groups/list` — requires `session`
+- `/groups/members` — requires `session`, `group`
 - `/groups/remove` — requires `session`, `group`, `username`
 - `/openings/create` — requires `session`, `purpose`, `start`, `end`
 - `/openings/mine` — requires `session`
