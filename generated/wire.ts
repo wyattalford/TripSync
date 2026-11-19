@@ -297,6 +297,25 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "GROUP_FORBIDDEN" | "GROUP_NOT_FOUND" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/notices/list": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "notices": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Notifying"]["_inbox"]>>>, ["notices"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/notices/mark-read": {
+    input: {
+      "notice": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Notifying"]["markRead"]>[0], ["notice"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "markedRead": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOTICE_FORBIDDEN" | "UNKNOWN_SESSION" };
+  };
   "/openings/create": {
     input: {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
@@ -624,6 +643,22 @@ export type OpenTimeWireHttp = {
       "removed": true;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/notices/list": {
+    input: Record<string, never>;
+    output: {
+      "notices": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Notifying"]["_inbox"]>>>, ["notices"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/notices/mark-read": {
+    input: {
+      "notice": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Notifying"]["markRead"]>[0], ["notice"]>>;
+    };
+    output: {
+      "markedRead": true;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/openings/create": {
     input: {

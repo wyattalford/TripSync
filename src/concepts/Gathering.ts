@@ -1,4 +1,5 @@
 import type { Collection, Db, ClientSession } from "mongodb";
+import { queueNotices } from "../noticeOutbox.ts";
 
 export class InvalidGathering extends Error {}
 export class GatheringConflict extends Error {}
@@ -80,23 +81,27 @@ export class GatheringConcept {
       || selected.includes(organizer) || !purpose.trim() || !activity.trim() || !place.trim()) {
       throw new InvalidGathering("Choose invitees and valid future gathering details.");
     }
-    if (await conflicting(this.gatherings, [organizer], parsedStart, parsedEnd)) {
-      throw new GatheringConflict("A participant has a conflicting confirmed gathering.");
-    }
     const gathering = crypto.randomUUID(), version = crypto.randomUUID();
     await this.control.updateOne({ _id: "commitments" }, { $setOnInsert: { revision: 0 } }, { upsert: true });
-    await this.gatherings.insertOne({
-      _id: gathering, organizer, context, status: "PROPOSED", currentVersion: version,
-      currentStart: parsedStart, currentEnd: parsedEnd, attendees: [],
-      versions: [{ version, number: 1, purpose: purpose.trim(), activity: activity.trim(), place: place.trim(),
-        start: parsedStart, end: parsedEnd,
-        responses: Object.fromEntries([[organizer, "ACCEPTED"], ...selected.map((user) => [user, "PENDING"])]) as Record<string, ResponseStatus> }],
+    return serializedCommitmentChange(this.db, this.control, async (session) => {
+      if (await conflicting(this.gatherings, [organizer], parsedStart, parsedEnd, undefined, session)) {
+        throw new GatheringConflict("A participant has a conflicting confirmed gathering.");
+      }
+      await this.gatherings.insertOne({
+        _id: gathering, organizer, context, status: "PROPOSED", currentVersion: version,
+        currentStart: parsedStart, currentEnd: parsedEnd, attendees: [],
+        versions: [{ version, number: 1, purpose: purpose.trim(), activity: activity.trim(), place: place.trim(),
+          start: parsedStart, end: parsedEnd,
+          responses: Object.fromEntries([[organizer, "ACCEPTED"], ...selected.map((user) => [user, "PENDING"])]) as Record<string, ResponseStatus> }],
+      }, { session });
+      await queueNotices(this.db, session, { recipients: selected, message: `You have been invited to ${activity.trim()}`, destination: `/gatherings/${gathering}` });
+      return { gathering, version };
     });
-    return { gathering, version };
   }
 
   async invite({ user, gathering, version, invitee }: { user: string; gathering: string; version: string; invitee: string }) {
-    const document = await this.gatherings.findOne({ _id: gathering });
+    return serializedCommitmentChange(this.db, this.control, async (session) => {
+    const document = await this.gatherings.findOne({ _id: gathering }, { session });
     if (!document || document.organizer !== user || user === invitee || document.status === "CANCELLED"
       || document.currentVersion !== version || current(document).start <= this.clock()) {
       throw new GatheringForbidden("Only the organizer can invite another person to the current gathering.");
@@ -107,10 +112,12 @@ export class GatheringConcept {
     const result = await this.gatherings.updateOne(
       { _id: gathering, currentVersion: version, status: { $in: ["PROPOSED", "CONFIRMED"] },
         versions: { $elemMatch: { version, [`responses.${invitee}`]: response ?? { $exists: false } } } },
-      { $set: { [path]: "PENDING" } }, { arrayFilters: [{ "version.version": version }] },
+      { $set: { [path]: "PENDING" } }, { arrayFilters: [{ "version.version": version }], session },
     );
     if (!result.modifiedCount) throw new StaleGathering("Refresh to review the current gathering.");
+    await queueNotices(this.db, session, { recipients: [invitee], message: "You have been invited to a gathering", destination: `/gatherings/${gathering}` });
     return {};
+    });
   }
 
   async edit({ user, gathering, expectedVersion, purpose, activity, place, start, end }: {
@@ -143,6 +150,7 @@ export class GatheringConcept {
         { session },
       );
       if (!result.modifiedCount) throw new StaleGathering("Refresh to review the current gathering.");
+      await queueNotices(this.db, session, { recipients: affectedUsers, message: "The gathering changed; review and respond to the new version", destination: `/gatherings/${gathering}` });
       return { version, affectedUsers };
     });
   }
@@ -167,22 +175,26 @@ export class GatheringConcept {
         { arrayFilters: [{ "version.version": version }], session },
       );
       if (!result.modifiedCount) throw new StaleGathering("Refresh to review the current gathering.");
+      await queueNotices(this.db, session, { recipients: affectedUsers, message: joined ? "A participant joined the confirmed gathering" : "An invitee accepted your proposal", destination: `/gatherings/${gathering}` });
       return { joined, affectedUsers };
     });
   }
 
   async decline({ user, gathering, version }: { user: string; gathering: string; version: string }) {
-    const document = await this.gatherings.findOne({ _id: gathering });
+    return serializedCommitmentChange(this.db, this.control, async (session) => {
+    const document = await this.gatherings.findOne({ _id: gathering }, { session });
     if (!document || document.status === "CANCELLED" || document.currentVersion !== version || current(document).start <= this.clock()) {
       throw new StaleGathering("Refresh to review the current gathering.");
     }
     const path = `versions.$[version].responses.${user}`;
     const result = await this.gatherings.updateOne(
       { _id: gathering, status: { $in: ["PROPOSED", "CONFIRMED"] }, currentVersion: version, versions: { $elemMatch: { version, [`responses.${user}`]: "PENDING" } } },
-      { $set: { [path]: "DECLINED" } }, { arrayFilters: [{ "version.version": version }] },
+      { $set: { [path]: "DECLINED" } }, { arrayFilters: [{ "version.version": version }], session },
     );
     if (!result.modifiedCount) throw new GatheringForbidden("You cannot respond to this invitation.");
+    await queueNotices(this.db, session, { recipients: [document.organizer], message: "An invitee declined the gathering", destination: `/gatherings/${gathering}` });
     return {};
+    });
   }
 
   async withdraw({ user, gathering, version }: { user: string; gathering: string; version: string }) {
@@ -208,6 +220,9 @@ export class GatheringConcept {
         { arrayFilters: [{ "version.version": version }], session },
       );
       if (!changed.modifiedCount) throw new StaleGathering("Refresh to review the current gathering.");
+      await queueNotices(this.db, session, { recipients: affectedUsers,
+        message: closing ? "The gathering closed because only the organizer remained and no invitations were pending" : "A participant has withdrawn from the gathering",
+        destination: `/gatherings/${gathering}` });
       return { affectedUsers, status };
     });
   }
@@ -225,6 +240,7 @@ export class GatheringConcept {
         { $set: { status: "CANCELLED", attendees: [] } }, { session },
       );
       if (!changed.modifiedCount) throw new StaleGathering("Refresh to review the current gathering.");
+      await queueNotices(this.db, session, { recipients: affectedUsers, message: "The gathering has been cancelled", destination: `/gatherings/${gathering}` });
       return { affectedUsers };
     });
   }
@@ -248,6 +264,7 @@ export class GatheringConcept {
         { $set: { status: "CONFIRMED", attendees: accepted } }, { session },
       );
       if (!changed.modifiedCount) throw new StaleGathering("Refresh the accepted roster before confirming.");
+      await queueNotices(this.db, session, { recipients: accepted.filter((member) => member !== user), message: "Your gathering has been confirmed", destination: `/gatherings/${gathering}` });
       return { attendees: accepted };
     });
   }

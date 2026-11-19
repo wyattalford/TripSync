@@ -1,4 +1,5 @@
 import type { Collection, Db } from "mongodb";
+import { queueNotices } from "../noticeOutbox.ts";
 
 export class InvalidGroup extends Error {}
 export class GroupForbidden extends Error {}
@@ -33,7 +34,7 @@ async function changePending(groups: Collection<GroupDocument>, user: string, gr
 export class GroupingConcept {
   private readonly groups: Collection<GroupDocument>;
 
-  constructor(db: Db) {
+  constructor(private readonly db: Db) {
     this.groups = db.collection<GroupDocument>("grouping.groups");
   }
 
@@ -55,15 +56,24 @@ export class GroupingConcept {
 
   async invite({ user, group, invitee }: { user: string; group: string; invitee: string }) {
     if (user === invitee) throw new GroupForbidden("Only the owner can invite another account.");
-    const key = membershipKey(invitee);
-    const result = await this.groups.updateOne(
-      { _id: group, owner: user, status: "ACTIVE", $or: [{ [key]: { $exists: false } }, { [key]: { $in: ["DECLINED", "LEFT", "REMOVED"] } }] },
-      { $set: { [key]: "PENDING" } },
-    );
-    if (result.modifiedCount) return {};
-    const ownerGroup = await this.groups.findOne({ _id: group, owner: user, status: "ACTIVE" });
-    if (!ownerGroup) throw new GroupForbidden("Only the owner can invite another account.");
-    throw new MembershipConflict("This account is already invited or a member.");
+    const session = this.db.client.startSession();
+    try {
+      return await session.withTransaction(async () => {
+        const key = membershipKey(invitee);
+        const result = await this.groups.updateOne(
+          { _id: group, owner: user, status: "ACTIVE", $or: [{ [key]: { $exists: false } }, { [key]: { $in: ["DECLINED", "LEFT", "REMOVED"] } }] },
+          { $set: { [key]: "PENDING" } }, { session },
+        );
+        if (!result.modifiedCount) {
+          const ownerGroup = await this.groups.findOne({ _id: group, owner: user, status: "ACTIVE" }, { session });
+          if (!ownerGroup) throw new GroupForbidden("Only the owner can invite another account.");
+          throw new MembershipConflict("This account is already invited or a member.");
+        }
+        const name = (await this.groups.findOne({ _id: group }, { session }))?.name ?? "a group";
+        await queueNotices(this.db, session, { recipients: [invitee], message: `You have been invited to ${name}`, destination: `/groups/${group}` });
+        return {};
+      }, { readConcern: { level: "snapshot" }, writeConcern: { w: "majority" } });
+    } finally { await session.endSession(); }
   }
 
   async accept({ user, group }: { user: string; group: string }) {

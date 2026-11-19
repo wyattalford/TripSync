@@ -43,6 +43,12 @@ button:hover { background: #084c43; }
 button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .signed-in > h2 { margin: 0; }
 .signed-in > button { margin: .8rem 0 2rem; }
+.inbox-panel { max-width: none; margin-bottom: 1.25rem; }
+.notice-list { display: grid; gap: .6rem; padding: 0; margin: 1rem 0 0; list-style: none; }
+.notice-list li { padding: .75rem; border: 1px solid #d6dfdb; border-radius: .4rem; }
+.notice-list li.unread { border-left: .3rem solid #0d6055; }
+.notice-list span { display: block; margin-top: .3rem; color: #526970; font-size: .85rem; }
+.notice-list button { margin-top: .5rem; }
 .group-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 1fr); align-items: start; gap: 1.25rem; }
 .group-layout .status-panel { max-width: none; }
 .group-actions { display: grid; gap: 1.25rem; }

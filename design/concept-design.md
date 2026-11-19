@@ -552,6 +552,8 @@ queries
 
 **Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying a group or gathering. Possessing that path does not grant access. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
 
+**Implementation note.** The local implementation persists each notification event in a MongoDB outbox within the same transaction as its triggering Grouping or Gathering action. A background dispatcher calls Notifying for each recipient, marks an event delivered only after every recipient succeeds, and retries undelivered events. Notifying enforces a unique recipient and sourceKey pair so retries do not duplicate notices. This implements the causal notification reactions below while preserving the successful domain change if delivery fails. The inbox displays current authorized group or gathering state when a destination is opened.
+
 ## Essential Reactions
 
 Requesting represents requests someone makes to the app, rather than another concept we need to design. For a request that requires signing in, the app first uses Authenticating to identify the user from their session. It then checks whether that user is allowed to perform the requested action. The authentication result must belong to the request being handled. Another user's successful authentication cannot authorize this request. If authentication or a permission check fails, the requested action does not happen.

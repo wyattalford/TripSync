@@ -18,6 +18,8 @@ export const policy = httpPolicy({
     GATHERING_CONFLICT: "CONFLICT",
     STALE_GATHERING: "CONFLICT",
     GATHERING_FORBIDDEN: "FORBIDDEN",
+    INVALID_NOTICE: "INVALID_REQUEST",
+    NOTICE_FORBIDDEN: "FORBIDDEN",
   },
   cookies: {
     session: {

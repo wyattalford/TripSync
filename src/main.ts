@@ -3,12 +3,23 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
 import { db } from "./db.ts";
 import { policy } from "./http.ts";
+import { deliverPendingNotices } from "./noticeOutbox.ts";
 
 const application = assembleApplication();
 const gateway = createGateway({ application });
 const api = createHttpHandler({ application, gateway, policy });
 const production = process.env.NODE_ENV === "production";
 const builtPages = new URL("../frontend/dist/", import.meta.url);
+let delivering = false;
+async function deliverNotices() {
+  if (delivering) return;
+  delivering = true;
+  try { await deliverPendingNotices(db, application.concepts.Notifying); }
+  catch (error) { console.error("Notice delivery will retry", error); }
+  finally { delivering = false; }
+}
+void deliverNotices();
+setInterval(() => { void deliverNotices(); }, 2_000).unref();
 
 async function health(): Promise<Response> {
   try {

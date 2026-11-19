@@ -33,7 +33,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 11.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 12.
 
 ### AvailabilitySharing
 
@@ -62,9 +62,9 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 
 #### Instances
 
-- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 15.
-  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 17.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 16.
+- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 16.
+  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 18.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 17.
 
 ### Gathering
 
@@ -109,9 +109,9 @@ Defined in [Gathering](../design/concepts/Gathering.md), line 1.
 
 #### Instances
 
-- `Gathering` — instance of `Gathering` — [Application types](../design/types.md), line 19.
-  - `Context` is `Grouping.Group` — [Application types](../design/types.md), line 21.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 20.
+- `Gathering` — instance of `Gathering` — [Application types](../design/types.md), line 20.
+  - `Context` is `Grouping.Group` — [Application types](../design/types.md), line 22.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 21.
 
 ### Grouping
 
@@ -152,8 +152,28 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 
 #### Instances
 
-- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 12.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 13.
+- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 13.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 14.
+
+### Notifying
+
+Defined in [Notifying](../design/concepts/Notifying.md), line 1.
+
+#### Actions
+
+- `notify(recipient: User, sourceKey: String, message: String, destination: String) : returns (notice: Notice)`
+  - Refuses `INVALID_NOTICE`: A notice needs a source, message, and application destination.
+- `markRead(user: User, notice: Notice) : returns ()`
+  - Refuses `NOTICE_FORBIDDEN`: This notice is not yours.
+
+#### Queries
+
+- `_inbox(user: User) : one (notices: NoticeSummaries)`
+
+#### Instances
+
+- `Notifying` — instance of `Notifying` — [Application types](../design/types.md), line 24.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 25.
 
 ## Computations
 
@@ -1191,6 +1211,73 @@ then
   RequestBoundary.respond (error: "GROUP_NOT_FOUND", requestId)
 ```
 
+### OpenTime.Notices.List
+
+Authored path: `OpenTime.Notices.List`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 8.
+
+```reaction
+when RequestBoundary.request (path: "/notices/list", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Notices.List#2
+
+Authored path: `OpenTime.Notices.List`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 8.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Notices.List
+where
+  Notifying._inbox (user) has (notices)
+  earlier, RequestBoundary.request (path: "/notices/list", requestId, session)
+then
+  RequestBoundary.respond (notices, requestId)
+```
+
+### OpenTime.Notices.MarkRead
+
+Authored path: `OpenTime.Notices.MarkRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 9.
+
+```reaction
+when RequestBoundary.request (notice, path: "/notices/mark-read", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Notices.MarkRead#2
+
+Authored path: `OpenTime.Notices.MarkRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 9.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Notices.MarkRead
+where
+  earlier, RequestBoundary.request (notice, path: "/notices/mark-read", requestId, session)
+then
+  Notifying.markRead (notice, user)
+```
+
+### OpenTime.Notices.MarkRead#3
+
+Authored path: `OpenTime.Notices.MarkRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 9.
+
+```reaction
+when Notifying.markRead (notice, user), asked by OpenTime.Notices.MarkRead#2
+where
+  earlier, RequestBoundary.request (notice, path: "/notices/mark-read", requestId, session)
+then
+  RequestBoundary.respond (markedRead: true, requestId)
+```
+
 ### OpenTime.Openings.Create
 
 Authored path: `OpenTime.Openings.Create`.
@@ -1488,6 +1575,8 @@ not listed here have no explicit input contract.
 - `/groups/list` — requires `session`
 - `/groups/members` — requires `session`, `group`
 - `/groups/remove` — requires `session`, `group`, `username`
+- `/notices/list` — requires `session`
+- `/notices/mark-read` — requires `session`, `notice`
 - `/openings/create` — requires `session`, `purpose`, `start`, `end`
 - `/openings/mine` — requires `session`
 - `/openings/overlap` — requires `session`, `group`, `purpose`, `from`, `to`, `duration`

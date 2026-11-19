@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "./api.ts";
 
 type Mode = "sign-in" | "register";
@@ -8,6 +8,7 @@ type Opening = { opening: string; purpose: string; start: string; end: string; a
 type Interval = { start: string; end: string };
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
+type NoticeSummary = { notice: string; message: string; destination: string; createdAt: string; readAt: string | null };
 const mode = ref<Mode>("sign-in");
 const username = ref("");
 const password = ref("");
@@ -28,6 +29,8 @@ const searchDuration = ref(60);
 const overlaps = ref<Interval[]>([]);
 const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
+const notices = ref<NoticeSummary[]>([]);
+let noticeRefreshTimer: ReturnType<typeof setInterval> | undefined;
 const extraInvitees = ref<Record<string, string>>({});
 const rosters = ref<Record<string, Member[]>>({});
 const proposalGroup = ref("");
@@ -89,6 +92,27 @@ function gatheringError(error: string): string {
   if (error === "CONFLICT") return "The accepted roster, version, or commitments changed. Refresh the gathering and try again.";
   if (error === "INVALID_REQUEST") return "Enter changed details with a valid future time, purpose, activity, and place.";
   return "OpenTime could not complete that request. Try again.";
+}
+
+async function refreshNotices() {
+  const result = await api.notices.list();
+  if ("error" in result) return;
+  notices.value = result.notices;
+}
+
+async function openNotice(item: NoticeSummary) {
+  if (!item.readAt) {
+    const result = await api.notices["mark-read"]({ notice: item.notice });
+    if ("error" in result) return showMessage("Could not mark this notice read. Try again.", "error");
+    await refreshNotices();
+  }
+  if (!/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(item.destination)) return;
+  history.pushState({}, "", item.destination);
+  await Promise.all([refreshGroups(), refreshGatherings()]);
+  await nextTick();
+  const target = document.getElementById(`destination-${item.destination.split("/")[2]}`);
+  if (target) target.scrollIntoView({ behavior: "smooth" });
+  else showMessage("This item is no longer available to your account.", "error");
 }
 
 function memberName(group: string, user: string): string {
@@ -375,13 +399,14 @@ async function refreshAccount() {
     const result = await api.auth.current();
     currentUsername.value = "error" in result ? "" : result.username;
     currentUser.value = "error" in result ? "" : result.user;
-    if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings(), refreshGatherings()]);
+    if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings(), refreshGatherings(), refreshNotices()]);
   } catch {
     currentUsername.value = "";
     currentUser.value = "";
     groups.value = [];
     openings.value = [];
     gatherings.value = [];
+    notices.value = [];
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
     loading.value = false;
@@ -517,6 +542,7 @@ async function signOut() {
     groups.value = [];
     openings.value = [];
     gatherings.value = [];
+    notices.value = [];
     showMessage("Signed out.", "success");
   } catch {
     showMessage("OpenTime could not reach the server. Try again.", "error");
@@ -525,7 +551,16 @@ async function signOut() {
   }
 }
 
-onMounted(refreshAccount);
+onMounted(() => {
+  void refreshAccount().then(async () => {
+    await nextTick();
+    if (/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(location.pathname)) {
+      document.getElementById(`destination-${location.pathname.split("/")[2]}`)?.scrollIntoView();
+    }
+  });
+  noticeRefreshTimer = setInterval(() => { if (currentUser.value) void refreshNotices(); }, 5_000);
+});
+onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); });
 </script>
 
 <template>
@@ -541,12 +576,23 @@ onMounted(refreshAccount);
       <section v-else-if="currentUsername" class="signed-in">
         <h2>Welcome, {{ currentUsername }}</h2>
         <button type="button" :disabled="busy" @click="signOut">Sign out</button>
+        <section class="status-panel inbox-panel">
+          <div class="group-heading"><h3>Your notices</h3><span>{{ notices.filter((item) => !item.readAt).length }} unread</span></div>
+          <p v-if="notices.length === 0">No notices yet.</p>
+          <ul v-else class="notice-list">
+            <li v-for="item in notices" :key="item.notice" :class="{ unread: !item.readAt }">
+              <p>{{ item.message }}</p>
+              <span>{{ localTime(item.createdAt) }} · {{ item.readAt ? 'Read' : 'Unread' }}</span>
+              <button type="button" class="secondary" @click="openNotice(item)">Review current details</button>
+            </li>
+          </ul>
+        </section>
         <div class="group-layout">
           <section class="status-panel">
             <h3>Your groups</h3>
             <p v-if="groups.length === 0">No groups yet. Create one or use an invitation link.</p>
             <ul v-else class="group-list">
-              <li v-for="group in groups" :key="group.group" class="group-card">
+              <li v-for="group in groups" :id="`destination-${group.group}`" :key="group.group" class="group-card">
                 <div class="group-heading"><strong>{{ group.name }}</strong><span>{{ group.membership === "PENDING" ? "Invitation pending" : `${group.memberCount} member${group.memberCount === 1 ? '' : 's'}` }}</span></div>
                 <div v-if="group.membership === 'PENDING'" class="button-row">
                   <button type="button" :disabled="busy" @click="respondToInvite(group.group, 'accept')">Accept invitation</button>
@@ -687,7 +733,7 @@ onMounted(refreshAccount);
             <h3>Your gatherings</h3>
             <p v-if="gatherings.length === 0">No proposals or confirmed gatherings yet.</p>
             <ul v-else class="gathering-list">
-              <li v-for="gathering in gatherings" :key="gathering.gathering" class="gathering-card">
+              <li v-for="gathering in gatherings" :id="`destination-${gathering.gathering}`" :key="gathering.gathering" class="gathering-card">
                 <div class="group-heading"><strong>{{ gathering.activity }}</strong><span>Version {{ gathering.number }} · {{ gathering.status }}</span></div>
                 <p>{{ gathering.purpose }} · {{ gathering.place }}</p>
                 <p>{{ localTime(gathering.start) }} – {{ localTime(gathering.end) }}</p>
