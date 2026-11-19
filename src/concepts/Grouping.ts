@@ -1,4 +1,4 @@
-import type { Collection, Db } from "mongodb";
+import type { ClientSession, Collection, Db } from "mongodb";
 import { queueNotices } from "../noticeOutbox.ts";
 
 export class InvalidGroup extends Error {}
@@ -19,6 +19,13 @@ type GroupDocument = {
 
 function membershipKey(user: string): string {
   return `memberships.${user}`;
+}
+
+export async function readGroupAccess(db: Db, user: string, group: string, session?: ClientSession) {
+  const found = await db.collection<GroupDocument>("grouping.groups").findOne({ _id: group, status: "ACTIVE", [membershipKey(user)]: "MEMBER" }, { session });
+  if (!found) return { allowed: false, members: [] as string[] };
+  return { allowed: true, members: Object.entries(found.memberships)
+    .filter(([, status]) => status === "MEMBER").map(([member]) => member) };
 }
 
 async function changePending(groups: Collection<GroupDocument>, user: string, group: string, status: MembershipStatus, message: string) {
@@ -173,10 +180,7 @@ export class GroupingConcept {
   }
 
   async _accessFor({ user, group }: { user: string; group: string }) {
-    const found = await this.groups.findOne({ _id: group, status: "ACTIVE", [membershipKey(user)]: "MEMBER" });
-    if (!found) return { allowed: false, members: [] as string[] };
-    return { allowed: true, members: Object.entries(found.memberships)
-      .filter(([, status]) => status === "MEMBER").map(([member]) => member) };
+    return readGroupAccess(this.db, user, group);
   }
 
   async _canPlanWith({ user, group, invitees }: { user: string; group: string; invitees: string[] }) {

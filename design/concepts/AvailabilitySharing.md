@@ -21,6 +21,8 @@ opaque OwnedOpenings
   A user's openings with their details and selected audience identities.
 opaque OverlapIntervals
   Continuous common intervals at least the requested duration long, ordered by start.
+opaque PartialSuggestions
+  Best intervals for the largest available subset when no full-group interval meets the duration, with counts and names of unavailable members.
 ```
 
 ## State
@@ -97,6 +99,9 @@ _sharedWith(audience: Audience, purpose: String, from: DateTime, to: DateTime) :
 
 _sharedSnapshot(audience: Audience, purpose: String, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)
   Returns the same intervals as one internal snapshot for server-side overlap calculation. Never exposed as a public endpoint.
+
+_overlapSnapshot(user: User, group: Audience, purpose: String, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)
+  Uses the internal read coordinator to combine membership, openings, and commitments from one MongoDB snapshot. Returns full-group overlaps when present; otherwise the best partial-group suggestions. No rows of individual openings are exposed.
 
 _ownedSnapshot(user: User) : one (openings: OwnedOpenings)
   Returns only that user's openings as one record for the private editor view.

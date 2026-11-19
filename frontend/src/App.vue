@@ -6,6 +6,7 @@ type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
 type Opening = { opening: string; purpose: string; start: string; end: string; audiences: string[] };
 type Interval = { start: string; end: string };
+type PartialSuggestion = Interval & { availableCount: number; totalCount: number; unavailable: { user: string; username: string }[] };
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
 type NoticeSummary = { notice: string; message: string; destination: string; createdAt: string; readAt: string | null };
@@ -27,6 +28,7 @@ const searchFrom = ref("");
 const searchTo = ref("");
 const searchDuration = ref(60);
 const overlaps = ref<Interval[]>([]);
+const suggestions = ref<PartialSuggestion[]>([]);
 const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
 const notices = ref<NoticeSummary[]>([]);
@@ -83,6 +85,7 @@ function openingError(error: string): string {
   if (error === "FORBIDDEN") return "You can only change your own opening and share it with groups you belong to.";
   if (error === "CONFLICT") return "Your openings cannot overlap. Change one of the time ranges.";
   if (error === "INVALID_REQUEST") return "Enter a purpose and a valid time range that has not ended.";
+  if (error === "INTERNAL_ERROR") return "Could not read a consistent group snapshot. Please retry the search.";
   return "OpenTime could not complete that request. Try again.";
 }
 
@@ -173,6 +176,7 @@ async function respondGathering(gathering: GatheringSummary, action: "accept" | 
       : await api.gatherings.decline({ gathering: gathering.gathering, version: gathering.version });
     if ("error" in result) return showMessage(gatheringError(result.error), "error");
     await refreshGatherings();
+    if (action === "accept" && "joined" in result && result.joined) searched.value = false;
     showMessage(action === "decline" ? "You declined these details."
       : "joined" in result && result.joined ? "You joined the confirmed gathering." : "You accepted these details. The organizer can confirm when ready.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
@@ -226,6 +230,7 @@ async function confirmGathering(gathering: GatheringSummary) {
       return showMessage(gatheringError(result.error), "error");
     }
     await refreshGatherings();
+    searched.value = false;
     showMessage("Gathering confirmed for the accepted people.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
@@ -378,6 +383,7 @@ async function findOverlap() {
     const result = await api.openings.overlap({ group: searchGroup.value, purpose: searchPurpose.value.trim(), from, to, duration: searchDuration.value });
     if ("error" in result) return showMessage(openingError(result.error), "error");
     overlaps.value = result.overlaps;
+    suggestions.value = result.suggestions;
     searched.value = true;
     showMessage("Shared openings updated.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
@@ -683,7 +689,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
         </div>
         <section class="status-panel overlap-panel">
           <h3>Find shared time</h3>
-          <p>Search the current members of one group. Results show only times everyone has shared for this purpose.</p>
+          <p>Search the current members of one group. If no time works for everyone, OpenTime shows the best times for the most members and names who has no usable time then.</p>
           <form @submit.prevent="findOverlap">
             <div class="search-fields">
               <div><label for="search-group">Group</label><select id="search-group" v-model="searchGroup" :disabled="busy" required><option value="" disabled>Choose a group</option><option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option></select></div>
@@ -695,11 +701,19 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             <button type="submit" :disabled="busy">Find shared time</button>
           </form>
           <div v-if="searched" class="overlap-results" aria-live="polite">
-            <h4>Shared openings</h4>
-            <p v-if="overlaps.length === 0">No shared time in this range yet. Everyone in the group needs a matching opening.</p>
-            <ul v-else><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}
+            <h4>Suggested times</h4>
+            <p v-if="overlaps.length === 0 && suggestions.length === 0">No time fits at least two members for the requested duration.</p>
+            <ul v-if="overlaps.length"><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}
               <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
             </li></ul>
+            <template v-if="suggestions.length">
+              <p>Best partial-group times. These are suggestions, not commitments. You can still invite someone who has no usable time; they decide whether to accept.</p>
+              <ul><li v-for="interval in suggestions" :key="interval.start + interval.end">
+                {{ localTime(interval.start) }} – {{ localTime(interval.end) }} · {{ interval.availableCount }} of {{ interval.totalCount }} members are available.
+                No usable time: {{ interval.unavailable.map((member) => member.username).join(', ') }}.
+                <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
+              </li></ul>
+            </template>
           </div>
         </section>
         <div class="gathering-layout">

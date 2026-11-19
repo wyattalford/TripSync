@@ -1,4 +1,5 @@
-import { MongoServerError, type Collection, type Db } from "mongodb";
+import { MongoServerError, type ClientSession, type Collection, type Db } from "mongodb";
+import { readOverlapSnapshot } from "../overlapSnapshot.ts";
 
 export class InvalidOpening extends Error {}
 export class OpeningConflict extends Error {}
@@ -56,22 +57,26 @@ function ownedOpening(openings: Opening[], opening: string): Opening {
   return found;
 }
 
-async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, purpose: string, from: string, to: string, now: Date) {
+async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, purpose: string, from: string, to: string, now: Date, session?: ClientSession) {
   const matchingPurpose = purpose.trim();
   const lower = Math.max(instant(from)?.getTime() ?? Number.NaN, now.getTime());
   const upper = instant(to)?.getTime() ?? Number.NaN;
   if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) return [];
-  const found = await owners.find({ "openings.audiences": audience }).toArray();
+  const found = await owners.find({ "openings.audiences": audience }, { session }).toArray();
   return found.flatMap((owner) => owner.openings.filter((opening) => opening.purpose === matchingPurpose && opening.audiences.includes(audience))
     .map((opening) => ({ owner: owner._id, start: Math.max(opening.start.getTime(), lower), end: Math.min(opening.end.getTime(), upper) }))
     .filter(({ start, end }) => start < end)
     .map(({ owner: member, start, end }) => ({ owner: member, start: new Date(start).toISOString(), end: new Date(end).toISOString() })));
 }
 
+export function readSharedIntervals(db: Db, audience: string, purpose: string, from: string, to: string, now: Date, session?: ClientSession) {
+  return sharedIntervals(db.collection<OwnerDocument>("availabilitySharing.owners"), audience, purpose, from, to, now, session);
+}
+
 export class AvailabilitySharingConcept {
   private readonly owners: Collection<OwnerDocument>;
 
-  constructor(db: Db, private readonly clock: () => Date = () => new Date()) {
+  constructor(private readonly db: Db, private readonly clock: () => Date = () => new Date()) {
     this.owners = db.collection<OwnerDocument>("availabilitySharing.owners");
   }
 
@@ -150,5 +155,11 @@ export class AvailabilitySharingConcept {
 
   async _ownedSnapshot({ user }: { user: string }) {
     return { openings: await this._owned({ user }) };
+  }
+
+  async _overlapSnapshot({ user, group, purpose, from, to, duration, now }: {
+    user: string; group: string; purpose: string; from: string; to: string; duration: number; now: Date;
+  }) {
+    return readOverlapSnapshot(this.db, { user, group, purpose, from, to, duration, now });
   }
 }

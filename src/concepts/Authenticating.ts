@@ -1,4 +1,4 @@
-import { MongoServerError, type Collection, type Db } from "mongodb";
+import { MongoServerError, type ClientSession, type Collection, type Db } from "mongodb";
 
 export class InvalidCredentials extends Error {}
 export class UsernameTaken extends Error {}
@@ -15,6 +15,12 @@ type SessionDocument = {
   user: string;
   expiresAt: Date;
 };
+
+export async function readUsernames(db: Db, users: string[], session?: ClientSession) {
+  const accounts = await db.collection<UserDocument>("authenticating.users")
+    .find({ _id: { $in: users } }, { projection: { _id: 1, username: 1 }, session }).toArray();
+  return new Map(accounts.map((account) => [account._id, account.username]));
+}
 
 const SESSION_LIFETIME_MS = 30 * 60 * 1000;
 

@@ -1,9 +1,9 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { compute, now, where } from "@mit-sdg/sync-engine/language";
-import { computations, concepts } from "../concepts.ts";
+import { now, where } from "@mit-sdg/sync-engine/language";
+import { concepts } from "../concepts.ts";
 import { validateOpeningRequest } from "../openingValidation.ts";
 
-const { Authenticating, Grouping, AvailabilitySharing, Gathering } = concepts;
+const { Authenticating, Grouping, AvailabilitySharing } = concepts;
 const options = { validators: { input: validateOpeningRequest } };
 
 const Create = endpoint(
@@ -62,17 +62,14 @@ const Mine = endpoint(
 
 const FindOverlap = endpoint(
   "/openings/overlap",
-  ({ session, group, purpose, from, to, duration, user, members, intervals, commitments, instant, overlaps }) => receive({ session, group, purpose, from, to, duration })
+  ({ session, group, purpose, from, to, duration, user, instant, overlaps, suggestions }) => receive({ session, group, purpose, from, to, duration })
     .then(Authenticating.authenticate({ session }).responds({ user }))
     .then(
       where(
         now(instant),
-        Grouping._accessFor({ user, group }).is({ allowed: true, members }),
-        AvailabilitySharing._sharedSnapshot({ audience: group, purpose, from, to, now: instant }).is({ intervals }),
-        Gathering._commitmentsFor({ users: members, from, to, now: instant }).is({ commitments }),
-        compute(computations.fullGroupOverlaps, { members, openings: intervals, commitments, from, to, now: instant, durationMinutes: duration }, overlaps),
-      ).then(respond({ overlaps })).named("member"),
-      where(Grouping._accessFor({ user, group }).is({ allowed: false }))
+        AvailabilitySharing._overlapSnapshot({ user, group, purpose, from, to, duration, now: instant }).is({ allowed: true, overlaps, suggestions }),
+      ).then(respond({ overlaps, suggestions })).named("member"),
+      where(now(instant), AvailabilitySharing._overlapSnapshot({ user, group, purpose, from, to, duration, now: instant }).is({ allowed: false }))
         .then(respond({ error: "GROUP_FORBIDDEN" })).named("not-member"),
     ),
   { ...options, input: { required: ["session", "group", "purpose", "from", "to", "duration"] } },

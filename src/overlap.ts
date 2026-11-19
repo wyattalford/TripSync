@@ -1,5 +1,6 @@
 export type TimeInterval = { start: string; end: string };
 export type PersonInterval = TimeInterval & { owner: string };
+export type PartialSuggestion = TimeInterval & { available: string[]; unavailable: string[]; availableCount: number; totalCount: number };
 
 type MillisecondInterval = { start: number; end: number };
 
@@ -76,4 +77,47 @@ export function fullGroupOverlaps({
   }
   return (common ?? []).filter(({ start, end }) => end - start >= durationMs)
     .map(({ start, end }) => ({ start: new Date(start).toISOString(), end: new Date(end).toISOString() }));
+}
+
+export function bestPartialGroupTimes({ members, openings, commitments, from, to, now, durationMinutes }: {
+  members: string[]; openings: PersonInterval[]; commitments: PersonInterval[];
+  from: string; to: string; now: string | Date; durationMinutes: number;
+}): PartialSuggestion[] {
+  const lower = Math.max(Date.parse(from), new Date(now).getTime());
+  const upper = Date.parse(to);
+  const durationMs = durationMinutes * 60_000;
+  const people = [...new Set(members)];
+  if (people.length < 3 || !Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper
+    || !Number.isFinite(durationMs) || durationMs <= 0) return [];
+  const usableByMember = new Map<string, MillisecondInterval[]>();
+  const starts = new Set<number>();
+  for (const member of people) {
+    const available = merged(openings.filter((item) => item.owner === member).map((item) => ({
+      start: Math.max(Date.parse(item.start), lower), end: Math.min(Date.parse(item.end), upper),
+    })));
+    const blocked = commitments.filter((item) => item.owner === member).map((item) => ({ start: Date.parse(item.start), end: Date.parse(item.end) }));
+    const usable = withoutCommitments(available, blocked);
+    usableByMember.set(member, usable);
+    for (const interval of usable) starts.add(interval.start);
+  }
+  const segments: { start: number; end: number; available: string[] }[] = [];
+  for (const time of [...starts].sort((a, b) => a - b)) {
+    const covering = people.flatMap((member) => {
+      const interval = usableByMember.get(member)?.find(({ start, end }) => start <= time && end - time >= durationMs);
+      return interval ? [{ member, end: interval.end }] : [];
+    });
+    if (covering.length < 2 || covering.length === people.length) continue;
+    const available = covering.map(({ member }) => member);
+    const end = Math.min(...covering.map((item) => item.end));
+    const previous = segments.at(-1);
+    if (previous && previous.end >= time && previous.available.join("\0") === available.join("\0")) previous.end = Math.max(previous.end, end);
+    else segments.push({ start: time, end, available });
+  }
+  const eligible = segments.filter((item) => item.end - item.start >= durationMs && item.available.length < people.length);
+  const bestCount = Math.max(0, ...eligible.map((item) => item.available.length));
+  return eligible.filter((item) => item.available.length === bestCount).map((item) => ({
+    start: new Date(item.start).toISOString(), end: new Date(item.end).toISOString(),
+    available: item.available, unavailable: people.filter((member) => !item.available.includes(member)),
+    availableCount: item.available.length, totalCount: people.length,
+  }));
 }

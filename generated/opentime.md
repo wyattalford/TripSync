@@ -58,6 +58,7 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 - `_owned(user: User) : many (opening: Opening, purpose: String, start: DateTime, end: DateTime, audiences: Audiences)`
 - `_sharedWith(audience: Audience, purpose: String, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)`
 - `_sharedSnapshot(audience: Audience, purpose: String, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)`
+- `_overlapSnapshot(user: User, group: Audience, purpose: String, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)`
 - `_ownedSnapshot(user: User) : one (openings: OwnedOpenings)`
 
 #### Instances
@@ -1341,12 +1342,9 @@ when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Fin
 where
   instant is the current flow's instant
   earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
-  Grouping._accessFor (group, user) has (allowed: true, members)
-  AvailabilitySharing._sharedSnapshot (audience: group, from, now: instant, purpose, to) has (intervals)
-  Gathering._commitmentsFor (from, now: instant, to, users: members) has (commitments)
-  overlaps is fullGroupOverlaps (commitments, durationMinutes: duration, from, members, now: instant, openings: intervals, to)
+  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, purpose, to, user) has (allowed: true, overlaps, suggestions)
 then
-  RequestBoundary.respond (overlaps, requestId)
+  RequestBoundary.respond (overlaps, requestId, suggestions)
 ```
 
 ### OpenTime.Openings.FindOverlap:not-member#2
@@ -1358,8 +1356,9 @@ Authored path: `OpenTime.Openings.FindOverlap`.
 ```reaction
 when Authenticating.authenticate (session, user), asked by OpenTime.Openings.FindOverlap
 where
+  instant is the current flow's instant
   earlier, RequestBoundary.request (duration, from, group, path: "/openings/overlap", purpose, requestId, session, to)
-  Grouping._accessFor (group, user) has (allowed: false)
+  AvailabilitySharing._overlapSnapshot (duration, from, group, now: instant, purpose, to, user) has (allowed: false)
 then
   RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
 ```

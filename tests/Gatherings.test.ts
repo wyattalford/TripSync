@@ -74,7 +74,7 @@ describe("OpenTime gathering boundary", () => {
     const detail = await api(post("/gatherings/get", { gathering }, noah.cookie));
     expect((await detail.json() as { status: string; accepted: string[] }).status).toBe("CONFIRMED");
     expect((await (await api(post("/gatherings/list", {}, noah.cookie))).json() as { gatherings: { myResponse: string }[] }).gatherings[0]?.myResponse).toBe("PENDING");
-    expect(await (await api(post("/openings/overlap", overlapSearch, john.cookie))).json()).toEqual({ overlaps: [] });
+    expect(await (await api(post("/openings/overlap", overlapSearch, john.cookie))).json()).toEqual({ overlaps: [], suggestions: [] });
   });
 
   test("serializes competing confirmations for a shared attendee", async () => {

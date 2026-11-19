@@ -644,19 +644,20 @@ where
   Grouping._getGroup(group) returns status = ACTIVE and members
   user is in members, members contains at least two users,
     from is before to, and duration is positive
-  AvailabilitySharing._sharedWith(group, purpose, from, to)
-    returns shared intervals
-  for each member, Gathering._commitments(member, from, to)
-    returns that member's committed intervals
+  an internal snapshot read obtains membership, shared intervals,
+    and confirmed commitments at one database version
   each member's usable intervals are the union of their shared intervals
     minus the union of their committed intervals
   overlaps are the intersection of every member's usable intervals,
     restricted to continuous intervals at least duration long
 then
-  respond to that requester with overlaps ordered by start
+  if overlaps exist, respond with those full-group intervals ordered by start
+  otherwise, find intervals meeting duration for the largest available
+    subset of at least two members and respond with available counts,
+    total count, and names of members without usable time there
 ```
 
-**Notes.** The MVP finds overlaps for the group's complete current membership. A member without a matching shared opening contributes no usable time, producing no full-group overlap. The response contains common intervals, not individual openings, reasons for unavailability, audiences, or details of conflicting gatherings. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. The query uses one request-time instant for clipping. A strict cross-concept database snapshot for membership and openings is not yet implemented. Aggregate results can still reveal limited information, especially in a two-person group.
+**Notes.** The MVP shows complete-group overlaps first. Only when none exist does it show the best partial-group times, naming members unavailable at each time. A member without a matching shared opening contributes no usable time. The response never includes individual opening intervals, audiences, or details of conflicting gatherings, but naming unavailable members reveals more than the original aggregate-only design. We should test this disclosure with users. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. The read coordinator obtains membership, openings, commitments, and display names in one MongoDB snapshot using one request-time instant. If that snapshot fails, search reports a retry error instead of returning a potentially mixed result.
 
 ### Propose a gathering
 
@@ -928,6 +929,6 @@ then
 
 Authenticating identifies the account responsible for each request. Grouping establishes which people belong to a planning audience. AvailabilitySharing records when invitations would be welcome, while Gathering records responses and definite commitments. This separation lets a person change their openings without rewriting a confirmed plan. Notifying draws attention to invitations and changes without deciding what anyone has accepted.
 
-All external User types are bound to Authenticating's User. AvailabilitySharing's Audience and Gathering's Context are bound to Grouping's Group. These are identities, not objects whose fields another concept may read. Reactions retrieve the necessary facts through each concept's queries and pass values through its actions. Group overlaps combine authorized openings with confirmed commitments while revealing only their common usable intervals. Confirmation, withdrawal, and cancellation change these calculated overlaps without deleting or copying opening records.
+All external User types are bound to Authenticating's User. AvailabilitySharing's Audience and Gathering's Context are bound to Grouping's Group. These are identities, not objects whose fields another concept may read. Reactions retrieve the necessary facts through each concept's queries and pass values through its actions. Group overlaps combine authorized openings with confirmed commitments showing complete-group intervals first, then the best partial-group intervals with counts and unavailable members if no complete-group time exists. Confirmation, withdrawal, and cancellation change these calculated overlaps without deleting or copying opening records.
 
 The MVP includes all five concepts, dated openings, versioned gathering proposals, and in-app notifications. Its central distinction is between belonging to a group, welcoming an invitation, accepting specific details, and having a confirmed plan. Each requires its own explicit evidence, and none is inferred from silence or an empty calendar.

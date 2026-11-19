@@ -339,15 +339,16 @@ export type OpenTimeWire = {
   };
   "/openings/overlap": {
     input: {
-      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
-      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["from"]>]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["duration"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["from"]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["group"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["purpose"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
-      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["to"]>]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["to"]>>;
     };
     output: {
-      "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;
+      "overlaps": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>>>, ["overlaps"]>>;
+      "suggestions": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>>>, ["suggestions"]>>;
     };
     error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
@@ -680,14 +681,15 @@ export type OpenTimeWireHttp = {
   };
   "/openings/overlap": {
     input: {
-      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["durationMinutes"]>>;
-      "from": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["from"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["from"]>]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_accessFor"]>[0], ["group"]>>;
-      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["purpose"]>>;
-      "to": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_sharedSnapshot"]>[0], ["to"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Gathering"]["_commitmentsFor"]>[0], ["to"]>]>>;
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["duration"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["from"]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["group"]>>;
+      "purpose": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["purpose"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>[0], ["to"]>>;
     };
     output: {
-      "overlaps": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.computations)["fullGroupOverlaps"]["fn"]>>, []>>;
+      "overlaps": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>>>, ["overlaps"]>>;
+      "suggestions": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_overlapSnapshot"]>>>, ["suggestions"]>>;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };

@@ -54,6 +54,17 @@ async function conflicting(gatherings: Collection<GatheringDocument>, users: str
   }, { session });
 }
 
+export async function readConfirmedCommitments(db: Db, users: string[], from: string, to: string, now: Date, session?: ClientSession) {
+  const lower = Math.max(instant(from)?.getTime() ?? Number.NaN, now.getTime());
+  const upper = instant(to)?.getTime() ?? Number.NaN;
+  if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) return [] as { owner: string; start: string; end: string }[];
+  const found = await db.collection<GatheringDocument>("gathering.gatherings").find({ status: "CONFIRMED", attendees: { $in: users }, currentStart: { $lt: new Date(upper) }, currentEnd: { $gt: new Date(lower) } }, { session }).toArray();
+  return found.flatMap((document) => document.attendees.filter((member) => users.includes(member)).map((owner) => ({
+    owner, start: new Date(Math.max(document.currentStart.getTime(), lower)).toISOString(),
+    end: new Date(Math.min(document.currentEnd.getTime(), upper)).toISOString(),
+  })));
+}
+
 async function serializedCommitmentChange<T>(db: Db, control: Collection<ControlDocument>, change: (session: ClientSession) => Promise<T>): Promise<T> {
   const session = db.client.startSession();
   try {
@@ -311,13 +322,6 @@ export class GatheringConcept {
   }
 
   async _commitmentsFor({ users, from, to, now }: { users: string[]; from: string; to: string; now: Date }) {
-    const lower = Math.max(instant(from)?.getTime() ?? Number.NaN, now.getTime());
-    const upper = instant(to)?.getTime() ?? Number.NaN;
-    if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) return { commitments: [] as { owner: string; start: string; end: string }[] };
-    const found = await this.gatherings.find({ status: "CONFIRMED", attendees: { $in: users }, currentStart: { $lt: new Date(upper) }, currentEnd: { $gt: new Date(lower) } }).toArray();
-    return { commitments: found.flatMap((document) => document.attendees.filter((member) => users.includes(member)).map((owner) => ({
-      owner, start: new Date(Math.max(document.currentStart.getTime(), lower)).toISOString(),
-      end: new Date(Math.min(document.currentEnd.getTime(), upper)).toISOString(),
-    }))) };
+    return { commitments: await readConfirmedCommitments(this.db, users, from, to, now) };
   }
 }

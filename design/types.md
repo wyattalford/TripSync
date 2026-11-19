@@ -23,4 +23,5 @@ instantiate Gathering with
 
 instantiate Notifying with
   User is Authenticating.User
+
 ```
