@@ -22,7 +22,7 @@ bun run dev
 
 The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `bun run db:up` initializes an authenticated single-node replica set for transaction tests without clearing the existing MongoDB volume. The local URI uses `directConnection=true` and `replicaSet=rs0`; copy the current `.env.example` if an older `.env` lacks those options. `MONGODB_URL` names the database; production uses the platform-provided connection string and `client.db()`. The hosted database must support MongoDB transactions before confirmation can be deployed. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
 
-To check the current project and run a production-style preview after MongoDB is up:
+To check the current project and run a production-style preview:
 
 ```sh
 bun run generate
@@ -32,6 +32,23 @@ bun run preview
 ```
 
 The preview serves built Vue files and `/api` from port 3000, with a fallback for Vue deep links. Tests use and reset only guarded `opentime_*_test` databases. `bun run db:down` stops the local MongoDB container without deleting its data.
+
+### Deploy on 6.1040 Apps
+
+The course platform deploys a GitHub commit. The team selected `opentime` as its requested permanent app name; confirm that it is available before creating the app. Configure it with these settings:
+
+| Setting | Value |
+| --- | --- |
+| Repository | `https://github.com/wyattalford/TripSync` |
+| Branch | The branch containing the reviewed commit (`wyatt-alpha` currently) |
+| Runtime | Bun |
+| Package directories | `.` and `frontend` |
+| Build script | `build` |
+| Start script | `start` |
+| Port | `3000` |
+| Health check | `/health` |
+
+Add the platform's MongoDB and name its connection variable `MONGODB_URL`. Set `PUBLIC_ORIGIN` to the app's exact HTTPS origin, expected to be `https://opentime.mit-sdg.dev` if that name is available, without a trailing slash. The platform supplies `HOST`, `PORT`, and `NODE_ENV`; do not copy local `.env` values into its settings. The server checks snapshot transaction support before serving requests, because confirmation and overlap search require it. A failed check prevents an unhealthy release from starting and appears in the deployment logs. Select the reviewed commit only after the local preview and checks pass, then smoke-test sign-in, an opening, a gathering confirmation, notices, and a reload at the public URL.
 
 ## Pitch
 

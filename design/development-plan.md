@@ -89,6 +89,8 @@ The Gathering actions are implemented locally: current group members can be invi
 
 Overlap reads now use a single MongoDB snapshot for membership, shared openings, commitments, and display names. A failed snapshot produces a retry error. When no full-group interval exists, search suggests intervals for the largest available subset of at least two members and names unavailable members. Integration tests cover partial and full-group results and a concurrent opening withdrawal during a snapshot read. A browser walkthrough verified four disposable users joining one group; the remainder of their gathering journey still needs a UI walkthrough.
 
+The deployment preflight now checks snapshot transaction support before the backend starts. The local production preview builds and serves `/health`, the home page, and gathering deep links. The team selected `opentime` as its requested 6.1040 Apps name, subject to availability. The team app and hosted MongoDB have not been created or verified yet.
+
 Remaining before the first Alpha checkpoint:
 
 1. Review the new snapshot read and partial-group suggestion behavior, then finish the John/Walker/Eli/Noah journey through the UI and verify privacy, stale versions and rosters, concurrent conflicts, changed commitments, and notices.

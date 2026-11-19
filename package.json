@@ -20,7 +20,7 @@
     "test": "bun test",
     "build": "bun run --cwd frontend build",
     "start": "bun src/main.ts",
-    "preview": "bun run build && NODE_ENV=production PUBLIC_ORIGIN=http://127.0.0.1:3000 bun run start",
+    "preview": "bun run db:up && bun run build && NODE_ENV=production PUBLIC_ORIGIN=http://127.0.0.1:3000 bun run start",
     "dev": "bun run db:up && bun run --parallel dev:backend dev:frontend",
     "dev:backend": "bun --watch src/main.ts",
     "dev:frontend": "bun run --cwd frontend dev",
