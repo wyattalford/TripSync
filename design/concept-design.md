@@ -20,6 +20,7 @@ state
 
   a set of Sessions with
     a user User
+    an expiresAt DateTime
 
 actions
   register (username: String, password: String) : return (user: User)
@@ -31,20 +32,21 @@ actions
       return user
 
   signIn (username: String, password: String)
-    : return (session: Session)
+    : return (session: Session, expiresAt: DateTime)
     where a user has the given username,
       and password matches that user's passwordVerifier
     then
-      create a new session associated with that user
-      return session
+      create a new session associated with that user, expiring
+        30 minutes from now
+      return session and expiresAt
 
   authenticate (session: Session) : return (user: User)
-    where session exists
+    where session exists and has not expired
     then
       return the user associated with session
 
   signOut (session: Session) : return ()
-    where session exists
+    where session exists and has not expired
     then
       remove session
       return
@@ -52,9 +54,15 @@ actions
 queries
   _exists (user: User) : one (exists: Flag)
     Returns whether user exists.
+
+  _byUsername (username: String) : optional (user: User)
+    Returns the registered user with this username, or no row.
+
+  _username (user: User) : optional (username: String)
+    Returns the user's username, or no row.
 ```
 
-**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Session identifiers are virtually unguessable, and password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions.
+**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Session identifiers are virtually unguessable, expire after 30 minutes, and are carried by an HttpOnly cookie in browser requests. Password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions. `_byUsername` lets a reaction resolve a named group invitee without passing account details into Grouping; `_username` supplies the authenticated account's display name.
 
 ## Grouping
 
@@ -123,14 +131,14 @@ actions
       set user's membership to DECLINED
       return
 
-  join (user: User, url: String) : return ()
+  join (user: User, url: String) : return (group: Group)
     where a group has the supplied url and status ACTIVE,
       and user either has no membership in that group or has
         membership status PENDING, DECLINED, or LEFT
     then
       create user's membership in that group if absent
       set that membership's status to MEMBER
-      return
+      return group
 
   leave (user: User, group: Group) : return ()
     where group is ACTIVE, user's membership is MEMBER,
@@ -169,20 +177,34 @@ queries
 
   _joinUrl (group: Group) : optional (url: String)
     Returns group's join URL; no row if group does not exist.
+
+  _visibleFor (user: User) : one (groups: set of GroupSummary)
+    Returns active groups in which user is a member or pending invitee,
+    including each group's identity, name, owner, membership status,
+    and current member count. Never includes declined, left, removed,
+    or closed groups.
+
+  _canShareWith (user: User, groups: set of Group) : one (allowed: Flag)
+    Returns true exactly when every supplied group is active and user is a
+    member. An empty set is allowed for a private opening.
+
+  _accessFor (user: User, group: Group)
+    : one (allowed: Flag, members: set of User)
+    Returns allowed and current members only for an active member;
+    otherwise false and no members.
 ```
 
-**Notes.** Grouping owns membership, not openings or gatherings. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
+**Notes.** Grouping owns membership, not openings or gatherings. The stored join URL is an unguessable relative `/join/` path; the UI attaches its own origin when sharing it, and opening that path does not join a group. Pending invitees may view their invitation but cannot access group overlaps. Reactions check active membership before using shared openings or creating a gathering for a group. Leaving, removal, or closure stops this access without deleting a person's openings. Existing gathering invitations and commitments remain accessible to their participants until explicitly withdrawn or cancelled. The owner closes the group rather than leaving it ownerless because ownership transfer is outside the initial scope.
 
 ## AvailabilitySharing
 
 ```text
 concept AvailabilitySharing
 
-purpose communicate when invitations for a particular purpose are welcome
-  to selected audiences
+purpose communicate free time to selected audiences
 
-principle a user creates a dated opening, gives it a purpose, and publishes it
-  to select audiences that may use it. The user can revise or withdraw
+principle a user creates a dated free-time opening and publishes it
+  to selected audiences that may use it. The user can revise or withdraw
   that opening. One record serves all selected audiences, and an opening
   stops contributing after its end time. Sharing an opening does not
   commit its owner to a particular invitation.
@@ -194,23 +216,22 @@ types
 state
   a set of Openings with
     an owner User
-    a purpose String
     a start DateTime
     an end DateTime
     an audiences set of Audience
 
-  Rule: Each opening has start before end and a nonblank purpose.
+  Rule: Each opening has start before end.
     Openings belonging to the same owner must not overlap.
     Openings belonging to different owners may overlap.
 
 actions
-  create (owner: User, purpose: String, start: DateTime, end: DateTime)
+  create (owner: User, start: DateTime, end: DateTime)
     : return (opening: Opening)
-    where purpose is not blank, start is before end,
+    where start is before end,
       end is in the future,
       and no opening owned by owner overlaps [start, end)
     then
-      create opening with the supplied owner, purpose, start, and end,
+      create opening with the supplied owner, start, and end,
         and an empty audiences set
       return opening
 
@@ -221,15 +242,15 @@ actions
       set opening's audiences to the supplied audiences
       return
 
-  revise (user: User, opening: Opening, purpose: String,
-    start: DateTime, end: DateTime, audiences: set of Audience)
+  revise (user: User, opening: Opening, start: DateTime,
+    end: DateTime, audiences: set of Audience)
     : return ()
     where opening exists with owner user and has not ended,
-      purpose is not blank, start is before end, end is in the future,
+      start is before end, end is in the future,
       no other opening owned by user overlaps [start, end),
       and at least one supplied value differs from its recorded value
     then
-      set opening's purpose, start, end, and audiences to the supplied values
+      set opening's start, end, and audiences to the supplied values
       return
 
   withdraw (user: User, opening: Opening) : return ()
@@ -239,23 +260,31 @@ actions
       return
 
 queries
-  _owned (user: User) : many (opening: Opening, purpose: String,
-    start: DateTime, end: DateTime, audiences: set of Audience)
+  _owned (user: User) : many (opening: Opening, start: DateTime,
+    end: DateTime, audiences: set of Audience)
     Returns user's openings, including ended openings, ordered by start
       and then end. Ties have unspecified order; no rows if absent.
 
-  _sharedWith (audience: Audience, purpose: String,
-    from: DateTime, to: DateTime)
+  _sharedWith (audience: Audience, from: DateTime, to: DateTime)
     : many (owner: User, start: DateTime, end: DateTime)
-    Returns intervals of openings that include audience, match purpose,
+    Returns intervals of openings that include audience,
       have not ended, and intersect [from, to). Each interval is clipped
       to that range and the current time. Returns no rows for an empty
       or reversed range. Row order is unspecified.
+
+  _ownedSnapshot (user: User) : one (openings: set of OpeningDetails)
+    Returns the same owner-only details in one record for the editor.
+
+  _sharedSnapshot (audience: Audience, from: DateTime,
+    to: DateTime, now: DateTime)
+    : one (intervals: set of SharedInterval)
+    Returns the same clipped intervals in one internal record using the
+    request's time instant. It is never a public endpoint.
 ```
 
-**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old willingness is not assumed to continue. Purpose values use consistent application labels such as dinner, studying, or watching a movie. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
+**Notes.** In OpenTime, Audience is bound to Grouping's Group. Only the owner sees an opening's individual details and selected audiences. Other members receive calculated group overlaps through authorized reactions. A changed audience set replaces the previous set and withdrawing removes the opening from every audience. Renewing an ended opening means publishing a new dated opening, so old availability is not assumed to continue. Openings are purpose-free; the purpose is set when proposing a gathering. The UI can select all current groups or a subset for one opening. Groups joined later are not automatically added. Search duration is measured in minutes. Openings belonging to one owner cannot overlap regardless of the intended gathering. The implementation stores one owner's openings together and checks a revision on every update to enforce this rule under concurrent writes. The MVP uses dated intervals rather than recurring schedules or calendar imports for the initial implementation.
 
-All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner and matching the same purpose are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
+All intervals use [start, end): an interval ending at 7 PM does not conflict with one starting at 7 PM. DateTime values represent absolute instants and are displayed in the user's local time. Adjacent openings belonging to the same owner are combined when calculating coverage. All time checks use the system clock. These interval conventions also apply to Gathering and the reactions below.
 
 ## Gathering
 
@@ -468,7 +497,7 @@ queries
       Row order is unspecified.
 ```
 
-**Notes.** In OpenTime, Context is bound to Grouping's Group. Reactions check membership before supplying invitees, and Gathering never reads another concept's state. Conflict checks and state changes occur atomically. Adding an invitee does not change existing acceptances. Accepting an already confirmed version immediately adds that person to its attendees. Editing creates a new version, preserves earlier versions and responses, resets invitees to PENDING, and returns the gathering to PROPOSED. Editing a confirmed gathering releases its previous commitments until the revised version is accepted and confirmed again. Requests include the version the user saw, preventing acceptance of unseen changes. 
+**Notes.** In OpenTime, Context is bound to Grouping's Group. Reactions check membership before supplying invitees, and Gathering never reads another concept's state. The implemented Gathering actions cover proposal, extra invitation, version-aware accept/decline, confirmation, editing, withdrawal, and cancellation. Confirmation, editing, accepting, withdrawing, and cancellation use MongoDB transactions that write a shared commitment control document before checking conflicts or changing confirmed attendance. This serializes commitment changes, including concurrent late acceptance into conflicting plans. Local MongoDB runs as an authenticated single-node replica set; hosted transaction support must be verified before deployment. Adding an invitee does not change existing acceptances. Accepting an already confirmed version immediately adds that person to its attendees. Editing creates a new version, preserves earlier versions and responses, resets invitees to PENDING, and returns the gathering to PROPOSED. Editing a confirmed gathering releases its previous commitments until the revised version is accepted and confirmed again. Requests include the version the user saw, preventing acceptance of unseen changes.
 When the last non-organizer attendee withdraws from a CONFIRMED gathering, it becomes CANCELLED only if no responses to its current version remain PENDING. Otherwise, it stays CONFIRMED so pending invitees can still accept and join. A proposal awaiting responses remains PROPOSED. Cancellation clears attendance and releases commitments without erasing responses or past versions. Cancelled gatherings cannot reopen. The organizer cancels rather than withdrawing.
 
 ## Notifying
@@ -519,6 +548,8 @@ queries
 ```
 
 **Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying a group or gathering. Possessing that path does not grant access. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
+
+**Implementation note.** The local implementation persists each notification event in a MongoDB outbox within the same transaction as its triggering Grouping or Gathering action. A background dispatcher calls Notifying for each recipient, marks an event delivered only after every recipient succeeds, and retries undelivered events. Notifying enforces a unique recipient and sourceKey pair so retries do not duplicate notices. This implements the causal notification reactions below while preserving the successful domain change if delivery fails. The inbox displays current authorized group or gathering state when a destination is opened.
 
 ## Essential Reactions
 
@@ -574,11 +605,11 @@ then
 
 ```text
 when
-  Requesting.createOpening(session, purpose, start, end)
+  Requesting.createOpening(session, start, end)
   and Authenticating.authenticate(session) returns user
     within that request's flow
 then
-  AvailabilitySharing.create(user, purpose, start, end)
+  AvailabilitySharing.create(user, start, end)
 ```
 
 **Notes.** Users can only create openings for themselves. Openings cannot overlap with existing ones. Upon creation, openings are not shared with anyone.
@@ -603,26 +634,27 @@ then
 
 ```text
 when
-  Requesting.findOverlap(session, group, purpose, from, to, duration)
+  Requesting.findOverlap(session, group, from, to, duration)
   and Authenticating.authenticate(session) returns user
     within that request's flow
 where
   Grouping._getGroup(group) returns status = ACTIVE and members
   user is in members, members contains at least two users,
     from is before to, and duration is positive
-  AvailabilitySharing._sharedWith(group, purpose, from, to)
-    returns shared intervals
-  for each member, Gathering._commitments(member, from, to)
-    returns that member's committed intervals
+  an internal snapshot read obtains membership, shared intervals,
+    and confirmed commitments at one database version
   each member's usable intervals are the union of their shared intervals
     minus the union of their committed intervals
   overlaps are the intersection of every member's usable intervals,
     restricted to continuous intervals at least duration long
 then
-  respond to that requester with overlaps ordered by start
+  if overlaps exist, respond with those full-group intervals ordered by start
+  otherwise, find intervals meeting duration for the largest available
+    subset of at least two members and respond with available counts,
+    total count, and names of members without usable time there
 ```
 
-**Notes.** The MVP finds overlaps for the group's complete current membership. A member without a matching shared opening contributes no usable time, producing no full-group overlap. The response contains common intervals, not individual openings, reasons for unavailability, audiences, or details of conflicting gatherings. A changed opening or membership is reflected on the next calculation. Confirmation masks conflicting time through `_commitments`, and withdrawal or cancellation releases it if the underlying opening still exists. Calculations use a consistent current snapshot. Aggregate results can still reveal limited information, especially in a two-person group.
+**Notes.** The MVP shows complete-group overlaps first. Only when none exist does it show the best partial-group times, naming members unavailable at each time. A member without a matching shared opening contributes no usable time. The response never includes individual opening intervals, audiences, or details of conflicting gatherings, but naming unavailable members reveals more than the original aggregate-only design. We should test this disclosure with users. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. The read coordinator obtains membership, openings, commitments, and display names in one MongoDB snapshot using one request-time instant. If that snapshot fails, search reports a retry error instead of returning a potentially mixed result.
 
 ### Propose a gathering
 
@@ -700,6 +732,8 @@ then
 
 ### View a gathering and flag changed willingness
 
+**Planned after Alpha.** The Alpha view returns the current gathering and responses but does not yet compute `reviewNeeded`. The team deferred this personal warning; editing an opening never silently changes a confirmed attendance record.
+
 ```text
 when
   Requesting.viewGathering(session, gathering)
@@ -713,7 +747,7 @@ where
   AvailabilitySharing._owned(user) returns own openings
   reviewNeeded is true exactly when gathering is CONFIRMED,
     has not started, user is in attendees, and the union of user's
-    current openings matching purpose does not cover [start, end)
+    current free-time openings do not cover [start, end)
 then
   respond to that requester with the gathering details, responses,
     and their own reviewNeeded flag
@@ -894,6 +928,6 @@ then
 
 Authenticating identifies the account responsible for each request. Grouping establishes which people belong to a planning audience. AvailabilitySharing records when invitations would be welcome, while Gathering records responses and definite commitments. This separation lets a person change their openings without rewriting a confirmed plan. Notifying draws attention to invitations and changes without deciding what anyone has accepted.
 
-All external User types are bound to Authenticating's User. AvailabilitySharing's Audience and Gathering's Context are bound to Grouping's Group. These are identities, not objects whose fields another concept may read. Reactions retrieve the necessary facts through each concept's queries and pass values through its actions. Group overlaps combine authorized openings with confirmed commitments while revealing only their common usable intervals. Confirmation, withdrawal, and cancellation change these calculated overlaps without deleting or copying opening records.
+All external User types are bound to Authenticating's User. AvailabilitySharing's Audience and Gathering's Context are bound to Grouping's Group. These are identities, not objects whose fields another concept may read. Reactions retrieve the necessary facts through each concept's queries and pass values through its actions. Group overlaps combine authorized openings with confirmed commitments showing complete-group intervals first, then the best partial-group intervals with counts and unavailable members if no complete-group time exists. Confirmation, withdrawal, and cancellation change these calculated overlaps without deleting or copying opening records.
 
 The MVP includes all five concepts, dated openings, versioned gathering proposals, and in-app notifications. Its central distinction is between belonging to a group, welcoming an invitation, accepting specific details, and having a confirmed plan. Each requires its own explicit evidence, and none is inferred from silence or an empty calendar.
