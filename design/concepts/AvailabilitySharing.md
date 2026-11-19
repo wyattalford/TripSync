@@ -54,6 +54,9 @@ create(owner: User, start: DateTime, end: DateTime) : returns (opening: Opening)
     returns opening
 
 publish(user: User, opening: Opening, audiences: Audiences) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -63,6 +66,9 @@ publish(user: User, opening: Opening, audiences: Audiences) : returns ()
     returns
 
 revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: Audiences) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -78,6 +84,9 @@ revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: 
     returns
 
 withdraw(user: User, opening: Opening) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."

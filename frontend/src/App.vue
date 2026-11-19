@@ -83,6 +83,7 @@ function groupError(error: string): string {
 function openingError(error: string): string {
   if (error === "UNAUTHORIZED") return "Your session ended. Sign in again.";
   if (error === "FORBIDDEN") return "You can only change your own opening and share it with groups you belong to.";
+  if (error === "NOT_FOUND") return "This opening cannot be found.";
   if (error === "CONFLICT") return "Your openings cannot overlap. Change one of the time ranges.";
   if (error === "INVALID_REQUEST") return "Enter a valid time range that has not ended.";
   if (error === "INTERNAL_ERROR") return "Could not read a consistent group snapshot. Please retry the search.";

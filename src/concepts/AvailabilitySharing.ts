@@ -4,6 +4,7 @@ import { readOverlapSnapshot } from "../overlapSnapshot.ts";
 export class InvalidOpening extends Error {}
 export class OpeningConflict extends Error {}
 export class OpeningForbidden extends Error {}
+export class OpeningNotFound extends Error {}
 
 type Opening = {
   opening: string;
@@ -27,11 +28,16 @@ function overlaps(a: { start: Date; end: Date }, b: { start: Date; end: Date }):
   return a.start < b.end && b.start < a.end;
 }
 
-async function changeOwner(collection: Collection<OwnerDocument>, owner: string, change: Change, createIfMissing = false): Promise<void> {
+async function changeOwner(collection: Collection<OwnerDocument>, owner: string, change: Change, opening?: string): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt++) {
     let current = await collection.findOne({ _id: owner });
+    if (opening !== undefined && !current?.openings.some((item) => item.opening === opening)) {
+      const found = await collection.findOne({ "openings.opening": opening });
+      if (!found) throw new OpeningNotFound("This opening cannot be found.");
+      if (found._id !== owner) throw new OpeningForbidden("You cannot change this opening.");
+      continue;
+    }
     if (!current) {
-      if (!createIfMissing) throw new OpeningForbidden("You cannot change this opening.");
       try {
         await collection.insertOne({ _id: owner, revision: 0, openings: [] });
       } catch (error) {
@@ -90,7 +96,7 @@ export class AvailabilitySharingConcept {
         throw new OpeningConflict("Your openings cannot overlap.");
       }
       return [...existing, { opening, start: parsedStart, end: parsedEnd, audiences: [] }];
-    }, true);
+    });
     return { opening };
   }
 
@@ -99,7 +105,7 @@ export class AvailabilitySharingConcept {
     await changeOwner(this.owners, user, (existing) => {
       ownedOpening(existing, opening);
       return existing.map((item) => item.opening === opening ? { ...item, audiences: selected } : item);
-    });
+    }, opening);
     return {};
   }
 
@@ -122,7 +128,7 @@ export class AvailabilitySharingConcept {
       return existing.map((item) => item.opening === opening
         ? { opening, start: parsedStart, end: parsedEnd, audiences: selected }
         : item);
-    });
+    }, opening);
     return {};
   }
 
@@ -130,7 +136,7 @@ export class AvailabilitySharingConcept {
     await changeOwner(this.owners, user, (existing) => {
       ownedOpening(existing, opening);
       return existing.filter((item) => item.opening !== opening);
-    });
+    }, opening);
     return {};
   }
 
