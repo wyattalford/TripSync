@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { bestPartialGroupTimes, fullGroupOverlaps } from "../src/overlap.ts";
+import { bestPartialGroupTimes, fullGroupOverlaps } from "../../src/overlap.ts";
 
 describe("full-group overlap calculation", () => {
   test("combines adjacent openings and requires every member", () => {
