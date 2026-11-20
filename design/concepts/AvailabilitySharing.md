@@ -103,7 +103,7 @@ _owned(user: User) : many (opening: Opening, start: DateTime, end: DateTime, aud
   Returns the user's openings, including ended openings, ordered by start then end.
 
 _sharedWith(audience: Audience, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)
-  Returns still-current intervals clipped to the search range and current time. No rows for an empty range.
+  Returns still-current intervals shared with the audience and clipped to the search range and current time. No rows for an empty or reversed range.
 
 _sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)
   Returns the same intervals as one internal snapshot for server-side overlap calculation. Never exposed as a public endpoint.
