@@ -48,6 +48,7 @@ button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .task-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.5rem; }
 .task-nav a { padding: .55rem .8rem; border-radius: .4rem; background: #e0eee9; color: #0d6055; font-weight: 700; text-decoration: none; }
 .task-nav a:hover { background: #cce3da; }
+.task-nav a[aria-current="page"] { background: #0d6055; color: #fff; }
 .task-nav a:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .inbox-panel { max-width: none; margin-bottom: 1.25rem; }
 .notice-list { display: grid; gap: .6rem; padding: 0; margin: 1rem 0 0; list-style: none; }
@@ -71,7 +72,7 @@ button.secondary { background: #e0eee9; color: #0d6055; }
 button.secondary:hover { background: #cce3da; }
 .group-controls { margin-top: .8rem; }
 .group-controls summary { cursor: pointer; color: #0d6055; font-weight: 700; }
-.opening-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1.25rem; margin-top: 2rem; }
+.opening-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1.25rem; }
 .opening-layout .status-panel, .overlap-panel { max-width: none; }
 .opening-layout .status-panel > p, .overlap-panel > p { margin-bottom: 1rem; }
 .time-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
@@ -86,13 +87,12 @@ button.secondary:hover { background: #cce3da; }
 .opening-card { display: grid; min-width: 0; gap: .4rem; padding: .9rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .opening-card span { color: #526970; }
 .opening-card .button-row button { margin-top: .4rem; }
-.overlap-panel { margin-top: 2rem; }
 .search-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; gap: .3rem 1rem; }
 .overlap-results { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #d6dfdb; }
 .overlap-results h4 { margin: 0 0 .6rem; }
 .overlap-results ul { margin: 0; padding-left: 1.3rem; line-height: 1.8; }
 .overlap-results li button { margin: 0 .4rem; font-size: .85rem; }
-.gathering-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1.25rem; margin-top: 2rem; }
+.gathering-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1.25rem; }
 .gathering-layout .status-panel { max-width: none; }
 .gathering-layout .status-panel > p { margin-bottom: 1rem; }
 .gathering-list { display: grid; gap: .8rem; list-style: none; margin: 1rem 0; padding: 0; }

@@ -10,6 +10,30 @@ type PartialSuggestion = Interval & { availableCount: number; totalCount: number
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
 type NoticeSummary = { notice: string; message: string; destination: string; createdAt: string; readAt: string | null };
+type Section = "groups" | "openings" | "shared-time" | "gatherings" | "notices";
+const sections: Section[] = ["groups", "openings", "shared-time", "gatherings", "notices"];
+
+function sectionFromLocation(): Section {
+  const hash = location.hash.slice(1);
+  const section = sections.find((item) => item === hash);
+  if (section) return section;
+  return location.pathname.startsWith("/gatherings/") ? "gatherings" : "groups";
+}
+
+const activeSection = ref<Section>(sectionFromLocation());
+function syncSection() { activeSection.value = sectionFromLocation(); }
+
+async function scrollToDestination() {
+  if (!/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(location.pathname) || location.hash) return;
+  await nextTick();
+  document.getElementById(`destination-${location.pathname.split("/")[2]}`)?.scrollIntoView();
+}
+
+function handleLocationChange() {
+  syncSection();
+  void scrollToDestination();
+}
+
 const mode = ref<Mode>("sign-in");
 const username = ref("");
 const password = ref("");
@@ -112,6 +136,7 @@ async function openNotice(item: NoticeSummary) {
   }
   if (!/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(item.destination)) return;
   history.pushState({}, "", item.destination);
+  syncSection();
   await Promise.all([refreshGroups(), refreshGatherings()]);
   await nextTick();
   const target = document.getElementById(`destination-${item.destination.split("/")[2]}`);
@@ -139,11 +164,14 @@ async function refreshGatherings() {
   await Promise.all([...new Set(result.gatherings.map((gathering) => gathering.context))].map((group) => loadRoster(group)));
 }
 
-function proposeFromOverlap(interval: Interval) {
+async function proposeFromOverlap(interval: Interval) {
   proposalGroup.value = searchGroup.value;
   proposalPurpose.value = "";
   proposalStart.value = localInput(interval.start);
   proposalEnd.value = localInput(interval.end);
+  location.hash = "gatherings";
+  syncSection();
+  await nextTick();
   document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
 }
 
@@ -420,6 +448,7 @@ async function refreshAccount() {
   } finally {
     loading.value = false;
   }
+  if (currentUser.value) await scrollToDestination();
 }
 
 async function createGroup() {
@@ -474,7 +503,7 @@ async function joinGroup() {
     const result = await api.groups.join({ url });
     if ("error" in result) return showMessage(groupError(result.error), "error");
     joinInput.value = "";
-    if (location.pathname.startsWith("/join/")) history.replaceState({}, "", "/");
+    if (location.pathname.startsWith("/join/")) history.replaceState({}, "", `/${location.hash}`);
     await refreshGroups();
     showMessage("You joined the group.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
@@ -561,15 +590,16 @@ async function signOut() {
 }
 
 onMounted(() => {
-  void refreshAccount().then(async () => {
-    await nextTick();
-    if (/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(location.pathname)) {
-      document.getElementById(`destination-${location.pathname.split("/")[2]}`)?.scrollIntoView();
-    }
-  });
+  window.addEventListener("hashchange", handleLocationChange);
+  window.addEventListener("popstate", handleLocationChange);
+  void refreshAccount();
   noticeRefreshTimer = setInterval(() => { if (currentUser.value) void refreshNotices(); }, 5_000);
 });
-onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); });
+onUnmounted(() => {
+  window.removeEventListener("hashchange", handleLocationChange);
+  window.removeEventListener("popstate", handleLocationChange);
+  if (noticeRefreshTimer) clearInterval(noticeRefreshTimer);
+});
 </script>
 
 <template>
@@ -585,9 +615,9 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
       <section v-else-if="currentUsername" class="signed-in">
         <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2><button type="button" class="secondary" :disabled="busy" @click="signOut">Sign out</button></div>
         <nav class="task-nav" aria-label="OpenTime sections">
-          <a href="#groups">Groups</a><a href="#openings">Your free time</a><a href="#shared-time">Find shared time</a><a href="#gatherings">Gatherings</a><a href="#notices">Notices</a>
+          <a href="#groups" :aria-current="activeSection === 'groups' ? 'page' : undefined">Groups</a><a href="#openings" :aria-current="activeSection === 'openings' ? 'page' : undefined">Your free time</a><a href="#shared-time" :aria-current="activeSection === 'shared-time' ? 'page' : undefined">Find shared time</a><a href="#gatherings" :aria-current="activeSection === 'gatherings' ? 'page' : undefined">Gatherings</a><a href="#notices" :aria-current="activeSection === 'notices' ? 'page' : undefined">Notices</a>
         </nav>
-        <section class="status-panel inbox-panel" id="notices">
+        <section v-show="activeSection === 'notices'" class="status-panel inbox-panel" id="notices">
           <div class="group-heading"><h3>Your notices</h3><span>{{ notices.filter((item) => !item.readAt).length }} unread</span></div>
           <p v-if="notices.length === 0">No notices yet.</p>
           <ul v-else class="notice-list">
@@ -598,7 +628,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </li>
           </ul>
         </section>
-        <div class="group-layout" id="groups">
+        <div v-show="activeSection === 'groups'" class="group-layout" id="groups">
           <section class="status-panel">
             <h3>Your groups</h3>
             <p v-if="groups.length === 0">No groups yet. Create one or use an invitation link.</p>
@@ -651,7 +681,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </section>
           </div>
         </div>
-        <div class="opening-layout" id="openings">
+        <div v-show="activeSection === 'openings'" class="opening-layout" id="openings">
           <section class="status-panel" id="opening-form">
             <h3>{{ openingId ? "Revise your opening" : "Add an opening" }}</h3>
             <p>Add a time when you are free. You can use the same time with any groups you choose.</p>
@@ -693,7 +723,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </ul>
           </section>
         </div>
-        <section class="status-panel overlap-panel" id="shared-time">
+        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="shared-time">
           <h3>Find shared time</h3>
           <p>Find free time shared with this group. If no time works for everyone, see when the most members are free.</p>
           <form @submit.prevent="findOverlap">
@@ -721,7 +751,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             </template>
           </div>
         </section>
-        <div class="gathering-layout" id="gatherings">
+        <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="gatherings">
           <section class="status-panel" id="proposal-form">
             <h3>Propose a gathering</h3>
             <p>Choose current group members and specific details. A shared opening does not count as acceptance.</p>
@@ -783,7 +813,7 @@ onUnmounted(() => { if (noticeRefreshTimer) clearInterval(noticeRefreshTimer); }
             <button type="button" class="secondary" :disabled="busy" @click="refreshGatherings">Refresh responses</button>
           </section>
         </div>
-        <section v-if="editingGathering" id="gathering-edit" class="status-panel gathering-edit-panel">
+        <section v-if="editingGathering" v-show="activeSection === 'gatherings'" id="gathering-edit" class="status-panel gathering-edit-panel">
           <h3>Edit {{ editingGathering.activity }} · version {{ editingGathering.number }}</h3>
           <p>Saving creates a new version. Every invitee must respond to its details again. If this plan is confirmed, saving releases its current commitments until you reconfirm.</p>
           <form @submit.prevent="saveGatheringEdit">
