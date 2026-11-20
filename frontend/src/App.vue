@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "./api.ts";
+import WeeklyCalendar from "./WeeklyCalendar.vue";
+import { parseLocalOpeningTime, type CalendarSelection } from "./calendar.ts";
 
 type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
@@ -45,6 +47,12 @@ const openingId = ref("");
 const openingStart = ref("");
 const openingEnd = ref("");
 const openingAudiences = ref<string[]>([]);
+const openingEditorOpen = ref(false);
+const openingDrafts = ref<CalendarSelection[]>([]);
+const selectedOpeningEnded = computed(() => {
+  const opening = openings.value.find((item) => item.opening === openingId.value);
+  return !!opening && new Date(opening.end) <= new Date();
+});
 const shareableGroups = computed(() => groups.value.filter((group) => group.membership === "MEMBER"));
 const allOpeningGroupsSelected = computed(() => shareableGroups.value.length > 0 && shareableGroups.value.every((group) => openingAudiences.value.includes(group.group)));
 const searchGroup = ref("");
@@ -343,45 +351,94 @@ async function refreshOpenings() {
 }
 
 function resetOpeningForm() {
+  openingEditorOpen.value = false;
   openingId.value = "";
   openingStart.value = "";
   openingEnd.value = "";
   openingAudiences.value = [];
+  openingDrafts.value = [];
 }
 
-function editOpening(opening: Opening) {
+async function editOpening(opening: Opening) {
+  message.value = "";
+  openingEditorOpen.value = true;
   openingId.value = opening.opening;
   openingStart.value = localInput(opening.start);
   openingEnd.value = localInput(opening.end);
   openingAudiences.value = opening.audiences.filter((id) => shareableGroups.value.some((group) => group.group === id));
+  openingDrafts.value = [];
+  await nextTick();
   document.getElementById("opening-form")?.scrollIntoView({ behavior: "smooth" });
 }
 
+async function selectOpenings(intervals: CalendarSelection[]) {
+  resetOpeningForm();
+  message.value = "";
+  openingDrafts.value = intervals.map(({ start, end }) => ({ start: localInput(start), end: localInput(end) }));
+  openingEditorOpen.value = true;
+  await nextTick();
+  document.getElementById("opening-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function addOpeningManually() {
+  resetOpeningForm();
+  message.value = "";
+  openingDrafts.value = [{ start: "", end: "" }];
+  openingEditorOpen.value = true;
+}
+
 async function saveOpening() {
-  const start = absoluteTime(openingStart.value);
-  const end = absoluteTime(openingEnd.value);
+  if (!openingId.value) {
+    const ranges = openingDrafts.value.map(({ start, end }) => ({ start: parseLocalOpeningTime(start), end: parseLocalOpeningTime(end) }));
+    if (!ranges.length || ranges.some(({ start, end }) => !start || !end || start >= end || new Date(end) <= new Date())) {
+      return showMessage("Enter a valid time range that has not ended for each opening.", "error");
+    }
+    const sorted = ranges.map(({ start, end }) => ({ start: start!, end: end! })).sort((a, b) => a.start.localeCompare(b.start));
+    if (sorted.some((range, index) => index > 0 && sorted[index - 1]!.end > range.start)) {
+      return showMessage("Your selected openings cannot overlap.", "error");
+    }
+    busy.value = true;
+    let saved = 0;
+    try {
+      for (const range of ranges) {
+        const created = await api.openings.create({ start: range.start!, end: range.end! });
+        if ("error" in created) {
+          await refreshOpenings();
+          return showMessage(`${saved ? `${saved} opening${saved === 1 ? "" : "s"} saved. ` : ""}${openingError(created.error)}`, "error");
+        }
+        saved++;
+        searched.value = false;
+        openingDrafts.value.shift();
+        if (openingAudiences.value.length > 0) {
+          const shared = await api.openings.publish({ opening: created.opening, audiences: openingAudiences.value });
+          if ("error" in shared) {
+            await refreshOpenings();
+            if (!openingDrafts.value.length) resetOpeningForm();
+            return showMessage(`${saved} opening${saved === 1 ? "" : "s"} saved; the last was saved privately because sharing failed. ${openingError(shared.error)}`, "error");
+          }
+        }
+      }
+      resetOpeningForm();
+      await refreshOpenings();
+      searched.value = false;
+      showMessage(`${saved} opening${saved === 1 ? "" : "s"} saved.`, "success");
+    } catch {
+      await refreshOpenings();
+      showMessage(`${saved ? `${saved} opening${saved === 1 ? "" : "s"} saved. ` : ""}OpenTime could not reach the server. Check your calendar before retrying.`, "error");
+    } finally { busy.value = false; }
+    return;
+  }
+  const previous = openings.value.find((item) => item.opening === openingId.value);
+  const start = previous && openingStart.value === localInput(previous.start) ? previous.start : parseLocalOpeningTime(openingStart.value);
+  const end = previous && openingEnd.value === localInput(previous.end) ? previous.end : parseLocalOpeningTime(openingEnd.value);
   if (!start || !end || start >= end || new Date(end) <= new Date()) {
     return showMessage("Enter a valid time range that has not ended.", "error");
   }
   busy.value = true;
   try {
-    if (openingId.value) {
-      const result = await api.openings.revise({ opening: openingId.value, start, end, audiences: openingAudiences.value });
-      if ("error" in result) return showMessage(openingError(result.error), "error");
-      showMessage("Opening updated.", "success");
-    } else {
-      const created = await api.openings.create({ start, end });
-      if ("error" in created) return showMessage(openingError(created.error), "error");
-      if (openingAudiences.value.length > 0) {
-        const shared = await api.openings.publish({ opening: created.opening, audiences: openingAudiences.value });
-        if ("error" in shared) {
-          await refreshOpenings();
-          resetOpeningForm();
-          return showMessage(`Opening saved privately, but sharing failed. ${openingError(shared.error)}`, "error");
-        }
-      }
-      showMessage(openingAudiences.value.length ? "Opening shared with your selected groups." : "Private opening saved. You can share it later.", "success");
-    }
+    const result = await api.openings.revise({ opening: openingId.value, start, end, audiences: openingAudiences.value });
+    if ("error" in result) return showMessage(openingError(result.error), "error");
+    showMessage("Opening updated.", "success");
     resetOpeningForm();
     await refreshOpenings();
     searched.value = false;
@@ -442,6 +499,7 @@ async function refreshAccount() {
     currentUser.value = "";
     groups.value = [];
     openings.value = [];
+    resetOpeningForm();
     gatherings.value = [];
     notices.value = [];
     showMessage("OpenTime could not reach the server. Try again.", "error");
@@ -579,6 +637,7 @@ async function signOut() {
     currentUser.value = "";
     groups.value = [];
     openings.value = [];
+    resetOpeningForm();
     gatherings.value = [];
     notices.value = [];
     showMessage("Signed out.", "success");
@@ -610,7 +669,7 @@ onUnmounted(() => {
       <h1>Find an opening. Make a plan.</h1>
       <p class="intro">Share when you are free with chosen groups, find a time that works, and decide together whether to meet.</p>
 
-      <p v-if="message" class="notice" :class="messageKind" role="status">{{ message }}</p>
+      <p v-if="message && !(currentUsername && activeSection === 'openings')" class="notice" :class="messageKind" role="status">{{ message }}</p>
       <p v-if="loading">Checking your account…</p>
       <section v-else-if="currentUsername" class="signed-in">
         <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2><button type="button" class="secondary" :disabled="busy" @click="signOut">Sign out</button></div>
@@ -682,15 +741,27 @@ onUnmounted(() => {
           </div>
         </div>
         <div v-show="activeSection === 'openings'" class="opening-layout" id="openings">
-          <section class="status-panel" id="opening-form">
-            <h3>{{ openingId ? "Revise your opening" : "Add an opening" }}</h3>
-            <p>Add a time when you are free. You can use the same time with any groups you choose.</p>
+          <p v-if="message && !openingEditorOpen" class="notice" :class="messageKind" role="status">{{ message }}</p>
+          <WeeklyCalendar :openings="openings" :busy="busy" @select="selectOpenings" @edit="editOpening" @error="showMessage($event, 'error')" />
+          <button type="button" class="secondary manual-opening" :disabled="busy" @click="addOpeningManually">Add an opening with exact times</button>
+          <section v-if="openingEditorOpen" class="status-panel opening-editor" id="opening-form">
+            <h3>{{ openingId ? "Opening details" : "Review your openings" }}</h3>
+            <p>{{ selectedOpeningEnded ? "This opening has ended. You can withdraw it from your calendar." : "Review the times and choose which groups can see them." }}</p>
+            <p v-if="message" class="notice" :class="messageKind" role="status">{{ message }}</p>
             <form @submit.prevent="saveOpening">
-              <div class="time-fields">
-                <div><label for="opening-start">From</label><input id="opening-start" v-model="openingStart" type="datetime-local" :disabled="busy" required /></div>
-                <div><label for="opening-end">Until</label><input id="opening-end" v-model="openingEnd" type="datetime-local" :disabled="busy" required /></div>
+              <div v-if="openingId" class="time-fields">
+                <div><label for="opening-start">From</label><input id="opening-start" v-model="openingStart" type="datetime-local" :disabled="busy || selectedOpeningEnded" required /></div>
+                <div><label for="opening-end">Until</label><input id="opening-end" v-model="openingEnd" type="datetime-local" :disabled="busy || selectedOpeningEnded" required /></div>
               </div>
-              <fieldset class="group-choices">
+              <div v-for="(draft, index) in openingDrafts" v-else :key="index" class="opening-draft">
+                <strong>Opening {{ index + 1 }}</strong>
+                <div class="time-fields">
+                  <div><label :for="`opening-start-${index}`">From</label><input :id="`opening-start-${index}`" v-model="draft.start" type="datetime-local" :disabled="busy" required /></div>
+                  <div><label :for="`opening-end-${index}`">Until</label><input :id="`opening-end-${index}`" v-model="draft.end" type="datetime-local" :disabled="busy" required /></div>
+                </div>
+                <button v-if="openingDrafts.length > 1" type="button" class="secondary" :disabled="busy" @click="openingDrafts.splice(index, 1)">Remove opening {{ index + 1 }}</button>
+              </div>
+              <fieldset v-if="!selectedOpeningEnded" class="group-choices">
                 <legend>Share with groups</legend>
                 <p v-if="shareableGroups.length === 0">Join a group to share this opening. You can save it privately now.</p>
                 <template v-else>
@@ -702,25 +773,11 @@ onUnmounted(() => {
                 <p v-if="shareableGroups.length" class="field-hint">Only selected groups can use this free time. New groups are not added automatically.</p>
               </fieldset>
               <div class="button-row">
-                <button type="submit" :disabled="busy">{{ openingId ? "Save changes" : "Save opening" }}</button>
-                <button v-if="openingId" type="button" class="secondary" :disabled="busy" @click="resetOpeningForm">Cancel edit</button>
+                <button v-if="!selectedOpeningEnded" type="submit" :disabled="busy">{{ openingId ? "Save changes" : `Save ${openingDrafts.length === 1 ? "opening" : "openings"}` }}</button>
+                <button v-if="openingId" type="button" class="secondary" :disabled="busy" @click="withdrawOpening(openingId)">Withdraw opening</button>
+                <button type="button" class="secondary" :disabled="busy" @click="resetOpeningForm">Cancel</button>
               </div>
             </form>
-          </section>
-          <section class="status-panel">
-            <h3>Your openings</h3>
-            <p v-if="openings.length === 0">No openings yet. Add one to start finding time together.</p>
-            <ul v-else class="opening-list">
-              <li v-for="opening in openings" :key="opening.opening" class="opening-card">
-                <strong>Free time</strong>
-                <span>{{ localTime(opening.start) }} – {{ localTime(opening.end) }}</span>
-                <span>{{ opening.audiences.length ? `Shared with ${opening.audiences.length} group${opening.audiences.length === 1 ? '' : 's'}` : 'Private' }}</span>
-                <div class="button-row">
-                  <button type="button" class="secondary" :disabled="busy || new Date(opening.end) <= new Date()" @click="editOpening(opening)">Edit</button>
-                  <button type="button" class="secondary" :disabled="busy" @click="withdrawOpening(opening.opening)">Withdraw</button>
-                </div>
-              </li>
-            </ul>
           </section>
         </div>
         <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="shared-time">
