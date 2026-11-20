@@ -43,10 +43,10 @@ button { margin-top: 1rem; padding: .65rem 1rem; border: 0; border-radius: .4rem
 button:hover { background: #084c43; }
 button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .account-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
-.account-heading h2 { margin: 0; font-size: 1.35rem; }
+.account-heading h2 { min-width: 0; margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
 .account-heading button { margin: 0; }
 .task-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.5rem; }
-.task-nav a { padding: .55rem .8rem; border-radius: .4rem; background: #e0eee9; color: #0d6055; font-weight: 700; text-decoration: none; }
+.task-nav a { display: inline-flex; min-height: 2.75rem; align-items: center; padding: .55rem .8rem; border-radius: .4rem; background: #e0eee9; color: #0d6055; font-weight: 700; text-decoration: none; }
 .task-nav a:hover { background: #cce3da; }
 .task-nav a:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 .inbox-panel { max-width: none; margin-bottom: 1.25rem; }
@@ -79,9 +79,9 @@ button.secondary:hover { background: #cce3da; }
 .field-hint { color: #526970; font-size: .88rem; }
 .group-choices { min-width: 0; margin: 1rem 0 0; padding: .75rem; border: 1px solid #cbd9d4; border-radius: .4rem; }
 .group-choices legend { font-weight: 700; }
-.group-choices .check-row { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; font-weight: 400; }
+.group-choices .check-row { display: flex; min-height: 2.75rem; align-items: center; gap: .65rem; margin: .25rem 0; padding: .25rem 0; font-weight: 400; overflow-wrap: anywhere; }
 .group-choices .select-all-row { padding-bottom: .5rem; margin-bottom: .6rem; border-bottom: 1px solid #d6dfdb; font-weight: 700; }
-.group-choices input[type="checkbox"] { width: auto; }
+.group-choices input[type="checkbox"] { width: 1.25rem; height: 1.25rem; flex: 0 0 1.25rem; margin: 0; padding: 0; }
 .opening-list { display: grid; gap: .75rem; padding: 0; margin: 1rem 0 0; list-style: none; }
 .opening-card { display: grid; min-width: 0; gap: .4rem; padding: .9rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .opening-card span { color: #526970; }
@@ -105,4 +105,12 @@ button.secondary:hover { background: #cce3da; }
 .invite-extra { margin-top: .8rem; }
 @media (max-width: 56rem) { .opening-layout, .gathering-layout { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 48rem) { .group-layout { grid-template-columns: minmax(0, 1fr); } .content { padding-top: 2.5rem; } }
-@media (max-width: 42rem) { .search-fields, .gathering-edit-panel .time-fields { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 42rem) {
+  .site-header { padding: 1rem; }
+  .content { padding: 2rem 1rem 3rem; }
+  h1 { font-size: clamp(2rem, 9vw, 3rem); }
+  .intro { margin: 1rem 0 1.5rem; font-size: 1rem; line-height: 1.5; }
+  .status-panel { padding: 1rem; }
+  .search-fields, .gathering-edit-panel .time-fields { grid-template-columns: minmax(0, 1fr); }
+  button { min-height: 2.75rem; }
+}
