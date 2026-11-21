@@ -10,3 +10,17 @@ export function validateOpeningRequest(value: unknown): ValidationResult {
   }
   return { ok: true };
 }
+
+export function validateCalendarRequest(value: unknown): ValidationResult {
+  const validated = validateOpeningRequest(value);
+  if (!validated.ok || value === null || typeof value !== "object") return { ok: false };
+  const request = value as Record<string, unknown>;
+  if (typeof request.group !== "string" || !request.group
+    || typeof request.duration !== "number" || !Number.isFinite(request.duration) || request.duration <= 0
+    || typeof request.from !== "string" || typeof request.to !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(request.from)
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(request.to)
+    || !Number.isFinite(Date.parse(request.from)) || !Number.isFinite(Date.parse(request.to))
+    || Date.parse(request.from) >= Date.parse(request.to)) return { ok: false };
+  return validated;
+}

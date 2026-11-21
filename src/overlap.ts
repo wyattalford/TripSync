@@ -3,6 +3,7 @@ export type PersonInterval = TimeInterval & { owner: string };
 export type PartialSuggestion = TimeInterval & { available: string[]; unavailable: string[]; availableCount: number; totalCount: number };
 
 type MillisecondInterval = { start: number; end: number };
+export type AvailabilityCount = TimeInterval & { availableCount: number };
 
 function merged(intervals: MillisecondInterval[]): MillisecondInterval[] {
   const sorted = intervals.filter(({ start, end }) => start < end).sort((a, b) => a.start - b.start || a.end - b.end);
@@ -44,6 +45,50 @@ function intersection(left: MillisecondInterval[], right: MillisecondInterval[])
     else j++;
   }
   return merged(result);
+}
+
+export function availabilityCalendar({ members, openings, commitments, from, to, now, durationMinutes }: {
+  members: string[]; openings: PersonInterval[]; commitments: PersonInterval[];
+  from: string; to: string; now: string | Date; durationMinutes: number;
+}): { timeline: AvailabilityCount[]; windows: AvailabilityCount[]; total: number } {
+  const people = [...new Set(members)];
+  const lower = Math.max(Date.parse(from), new Date(now).getTime());
+  const upper = Date.parse(to);
+  const duration = durationMinutes * 60_000;
+  if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper || !Number.isFinite(duration) || duration <= 0) {
+    return { timeline: [], windows: [], total: people.length };
+  }
+  const usable = people.flatMap((member) => withoutCommitments(
+    merged(openings.filter((item) => item.owner === member).map((item) => ({
+      start: Math.max(Date.parse(item.start), lower), end: Math.min(Date.parse(item.end), upper),
+    }))),
+    commitments.filter((item) => item.owner === member).map((item) => ({ start: Date.parse(item.start), end: Date.parse(item.end) })),
+  ));
+  const events = new Map<number, number>([[lower, 0], [upper, 0]]);
+  for (const interval of usable) {
+    events.set(interval.start, (events.get(interval.start) ?? 0) + 1);
+    events.set(interval.end, (events.get(interval.end) ?? 0) - 1);
+  }
+  const times = [...events.keys()].sort((a, b) => a - b);
+  const timeline: AvailabilityCount[] = [];
+  let count = 0;
+  for (let index = 0; index < times.length - 1; index++) {
+    const time = times[index]!, end = times[index + 1]!;
+    count += events.get(time)!;
+    const previous = timeline.at(-1);
+    if (previous && previous.availableCount === count) previous.end = new Date(end).toISOString();
+    else timeline.push({ start: new Date(time).toISOString(), end: new Date(end).toISOString(), availableCount: count });
+  }
+  const windows: AvailabilityCount[] = [];
+  for (const start of new Set(usable.map((interval) => interval.start))) {
+    const ends = usable.filter((interval) => interval.start <= start && interval.end >= start + duration)
+      .map((interval) => interval.end).sort((a, b) => b - a);
+    for (let index = 0; index < ends.length; index++) {
+      if (ends[index] === ends[index + 1]) continue;
+      windows.push({ start: new Date(start).toISOString(), end: new Date(ends[index]!).toISOString(), availableCount: index + 1 });
+    }
+  }
+  return { timeline, windows, total: people.length };
 }
 
 export function fullGroupOverlaps({

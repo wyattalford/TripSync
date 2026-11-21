@@ -1,5 +1,50 @@
 import { describe, expect, test } from "bun:test";
-import { bestPartialGroupTimes, fullGroupOverlaps } from "../../src/overlap.ts";
+import { availabilityCalendar, bestPartialGroupTimes, fullGroupOverlaps } from "../../src/overlap.ts";
+
+describe("aggregate availability calendar", () => {
+  test("counts current members, combines adjacent openings, and subtracts commitments", () => {
+    const result = availabilityCalendar({
+      members: ["a", "b", "c", "a"],
+      openings: [
+        { owner: "a", start: "2035-01-01T09:00:00Z", end: "2035-01-01T10:00:00Z" },
+        { owner: "a", start: "2035-01-01T10:00:00Z", end: "2035-01-01T12:00:00Z" },
+        { owner: "b", start: "2035-01-01T09:30:00Z", end: "2035-01-01T11:30:00Z" },
+        { owner: "former", start: "2035-01-01T09:00:00Z", end: "2035-01-01T12:00:00Z" },
+      ],
+      commitments: [{ owner: "b", start: "2035-01-01T10:00:00Z", end: "2035-01-01T10:30:00Z" }],
+      from: "2035-01-01T08:00:00Z", to: "2035-01-01T12:00:00Z",
+      now: "2035-01-01T08:30:00Z", durationMinutes: 60,
+    });
+    expect(result.total).toBe(3);
+    expect(result.timeline).toEqual([
+      { start: "2035-01-01T08:30:00.000Z", end: "2035-01-01T09:00:00.000Z", availableCount: 0 },
+      { start: "2035-01-01T09:00:00.000Z", end: "2035-01-01T09:30:00.000Z", availableCount: 1 },
+      { start: "2035-01-01T09:30:00.000Z", end: "2035-01-01T10:00:00.000Z", availableCount: 2 },
+      { start: "2035-01-01T10:00:00.000Z", end: "2035-01-01T10:30:00.000Z", availableCount: 1 },
+      { start: "2035-01-01T10:30:00.000Z", end: "2035-01-01T11:30:00.000Z", availableCount: 2 },
+      { start: "2035-01-01T11:30:00.000Z", end: "2035-01-01T12:00:00.000Z", availableCount: 1 },
+    ]);
+    expect(result.windows).toContainEqual({ start: "2035-01-01T09:00:00.000Z", end: "2035-01-01T12:00:00.000Z", availableCount: 1 });
+    expect(result.windows).toContainEqual({ start: "2035-01-01T10:30:00.000Z", end: "2035-01-01T11:30:00.000Z", availableCount: 2 });
+    expect(result.windows.some((item) => item.availableCount === 2 && item.start < "2035-01-01T10:30")).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("former");
+  });
+
+  test("does not treat a changing set of members as a single qualifying window", () => {
+    const result = availabilityCalendar({
+      members: ["a", "b", "c"],
+      openings: [
+        { owner: "a", start: "2035-01-01T09:00:00Z", end: "2035-01-01T11:00:00Z" },
+        { owner: "b", start: "2035-01-01T09:00:00Z", end: "2035-01-01T10:00:00Z" },
+        { owner: "c", start: "2035-01-01T10:00:00Z", end: "2035-01-01T11:00:00Z" },
+      ],
+      commitments: [], from: "2035-01-01T09:00:00Z", to: "2035-01-01T11:00:00Z",
+      now: "2035-01-01T08:00:00Z", durationMinutes: 90,
+    });
+    expect(result.timeline).toEqual([{ start: "2035-01-01T09:00:00.000Z", end: "2035-01-01T11:00:00.000Z", availableCount: 2 }]);
+    expect(result.windows).toEqual([{ start: "2035-01-01T09:00:00.000Z", end: "2035-01-01T11:00:00.000Z", availableCount: 1 }]);
+  });
+});
 
 describe("full-group overlap calculation", () => {
   test("combines adjacent openings and requires every member", () => {

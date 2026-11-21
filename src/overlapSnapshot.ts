@@ -3,9 +3,22 @@ import { readUsernames } from "./concepts/Authenticating.ts";
 import { readGroupAccess } from "./concepts/Grouping.ts";
 import { readSharedIntervals } from "./concepts/AvailabilitySharing.ts";
 import { readConfirmedCommitments } from "./concepts/Gathering.ts";
-import { bestPartialGroupTimes, fullGroupOverlaps } from "./overlap.ts";
+import { availabilityCalendar, bestPartialGroupTimes, fullGroupOverlaps } from "./overlap.ts";
 
 type Search = { user: string; group: string; from: string; to: string; duration: number; now: Date };
+
+export async function readCalendarSnapshot(db: Db, input: Search) {
+  const session = db.client.startSession({ causalConsistency: false });
+  try {
+    return await session.withTransaction(async () => {
+      const { allowed, members } = await readGroupAccess(db, input.user, input.group, session);
+      if (!allowed) return { allowed: false, timeline: [], windows: [], total: 0 };
+      const openings = await readSharedIntervals(db, input.group, input.from, input.to, input.now, session);
+      const commitments = await readConfirmedCommitments(db, members, input.from, input.to, input.now, session);
+      return { allowed: true, ...availabilityCalendar({ members, openings, commitments, from: input.from, to: input.to, now: input.now, durationMinutes: input.duration }) };
+    }, { readConcern: { level: "snapshot" }, writeConcern: { w: "majority" } });
+  } finally { await session.endSession(); }
+}
 
 export async function readOverlapSnapshot(db: Db, input: Search, afterMembershipRead?: () => Promise<void>) {
   const session = db.client.startSession({ causalConsistency: false });

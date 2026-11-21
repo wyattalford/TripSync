@@ -23,6 +23,10 @@ opaque OverlapIntervals
   Continuous common intervals at least the requested duration long, ordered by start.
 opaque PartialSuggestions
   Best intervals for the largest available subset when no full-group interval meets the duration, with counts and names of unavailable members.
+opaque AvailabilityTimeline
+  Continuous intervals with the count of current members available; no individual opening details. Counts can still make individual availability inferable in small groups.
+opaque AvailabilityWindows
+  Intervals with the count of the same members available throughout for at least the requested duration; no member identities.
 ```
 
 ## State
@@ -110,6 +114,9 @@ _sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime)
 
 _overlapSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)
   Uses the internal read coordinator to combine membership, openings, and commitments from one MongoDB snapshot. Returns full-group overlaps when present; otherwise the best partial-group suggestions. No rows of individual openings are exposed.
+
+_calendarSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, timeline: AvailabilityTimeline, windows: AvailabilityWindows, total: Number)
+  Uses one MongoDB snapshot to check current membership, count usable shared availability after confirmed commitments, and find continuous windows of at least duration minutes with the same available members. Returns counts only, never individual openings or member identities.
 
 _ownedSnapshot(user: User) : one (openings: OwnedOpenings)
   Returns only that user's openings as one record for the private editor view.
