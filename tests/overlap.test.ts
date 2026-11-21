@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { availabilityCalendar, bestPartialGroupTimes, fullGroupOverlaps } from "../../src/overlap.ts";
+import { availabilityCalendar, bestPartialGroupTimes, fullGroupOverlaps } from "../src/overlap.ts";
 
 describe("aggregate availability calendar", () => {
   test("counts current members, combines adjacent openings, and subtracts commitments", () => {
