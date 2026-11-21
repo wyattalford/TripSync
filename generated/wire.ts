@@ -359,7 +359,7 @@ export type OpenTimeWire = {
     output: {
       "published": true;
     };
-    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "OPENING_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
   "/openings/revise": {
     input: {
@@ -372,7 +372,7 @@ export type OpenTimeWire = {
     output: {
       "revised": true;
     };
-    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "INVALID_OPENING" | "OPENING_CONFLICT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "INVALID_OPENING" | "OPENING_CONFLICT" | "OPENING_FORBIDDEN" | "OPENING_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
   "/openings/withdraw": {
     input: {
@@ -382,7 +382,7 @@ export type OpenTimeWire = {
     output: {
       "withdrawn": true;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "OPENING_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
 };
 
@@ -696,7 +696,7 @@ export type OpenTimeWireHttp = {
     output: {
       "published": true;
     };
-    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/openings/revise": {
     input: {
@@ -708,7 +708,7 @@ export type OpenTimeWireHttp = {
     output: {
       "revised": true;
     };
-    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/openings/withdraw": {
     input: {
@@ -717,6 +717,6 @@ export type OpenTimeWireHttp = {
     output: {
       "withdrawn": true;
     };
-    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
 };

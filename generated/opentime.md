@@ -45,12 +45,15 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
   - Refuses `INVALID_OPENING`: Enter a valid future-ending time range.
   - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
 - `publish(user: User, opening: Opening, audiences: Audiences) : returns ()`
+  - Refuses `OPENING_NOT_FOUND`: This opening cannot be found.
   - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
 - `revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: Audiences) : returns ()`
+  - Refuses `OPENING_NOT_FOUND`: This opening cannot be found.
   - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
   - Refuses `INVALID_OPENING`: Change at least one detail of an active opening to a valid interval.
   - Refuses `OPENING_CONFLICT`: Your openings cannot overlap.
 - `withdraw(user: User, opening: Opening) : returns ()`
+  - Refuses `OPENING_NOT_FOUND`: This opening cannot be found.
   - Refuses `OPENING_FORBIDDEN`: You cannot change this opening.
 
 #### Queries

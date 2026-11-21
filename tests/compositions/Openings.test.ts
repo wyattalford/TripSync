@@ -2,10 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { MongoClient, type Db } from "mongodb";
-import { assembleApplication } from "../src/assembly.ts";
-import { AvailabilitySharingConcept, OpeningConflict } from "../src/concepts/AvailabilitySharing.ts";
-import { policy } from "../src/http.ts";
-import { readOverlapSnapshot } from "../src/overlapSnapshot.ts";
+import { assembleApplication } from "../../src/assembly.ts";
+import { AvailabilitySharingConcept, OpeningConflict, OpeningForbidden, OpeningNotFound } from "../../src/concepts/AvailabilitySharing.ts";
+import { policy } from "../../src/http.ts";
+import { readOverlapSnapshot } from "../../src/overlapSnapshot.ts";
 
 const configuredUrl = process.env.MONGODB_URL;
 if (!configuredUrl) throw new Error("MONGODB_URL is required for opening tests.");
@@ -101,6 +101,47 @@ describe("OpenTime opening boundary", () => {
     await concept.withdraw({ user: "user-1", opening: original.opening });
     expect(await concept._owned({ user: "user-1" })).toEqual([]);
     await expect(concept.create({ owner: "user-1", start: at(-3), end: at(-1) })).rejects.toThrow();
+  });
+
+  test("distinguishes missing openings from openings owned by someone else", async () => {
+    const concept = new AvailabilitySharingConcept(db);
+    const start = at(2), end = at(4);
+    const { opening } = await concept.create({ owner: "owner", start, end });
+    await concept.create({ owner: "other", start, end });
+    const actions = [
+      (user: string, id: string) => concept.publish({ user, opening: id, audiences: [] }),
+      (user: string, id: string) => concept.revise({ user, opening: id, start: "invalid", end, audiences: [] }),
+      (user: string, id: string) => concept.withdraw({ user, opening: id }),
+    ];
+    await expect(actions[0]!("owner", "missing")).rejects.toThrow("This opening cannot be found.");
+    for (const action of actions) {
+      for (const user of ["owner", "other", "no-openings"]) {
+        await expect(action(user, "missing")).rejects.toBeInstanceOf(OpeningNotFound);
+      }
+      for (const user of ["other", "no-openings"]) {
+        await expect(action(user, opening)).rejects.toBeInstanceOf(OpeningForbidden);
+      }
+    }
+    await concept.withdraw({ user: "owner", opening });
+    for (const action of actions) {
+      await expect(action("owner", opening)).rejects.toBeInstanceOf(OpeningNotFound);
+    }
+  });
+
+  test("returns not found at the opening endpoints for a missing opening", async () => {
+    const api = handler();
+    await api(post("/auth/register", { username: "john", password: "safe password" }));
+    const signedIn = await api(post("/auth/sign-in", { username: "john", password: "safe password" }));
+    const cookie = signedIn.headers.get("set-cookie")!.split(";", 1)[0];
+    for (const [path, body] of [
+      ["/openings/publish", { opening: "missing", audiences: [] }],
+      ["/openings/revise", { opening: "missing", start: at(2), end: at(4), audiences: [] }],
+      ["/openings/withdraw", { opening: "missing" }],
+    ] as const) {
+      const response = await api(post(path, body, cookie));
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "NOT_FOUND" });
+    }
   });
 
   test("returns the largest partial group only when no full-group time exists", async () => {

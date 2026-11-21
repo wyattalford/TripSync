@@ -54,6 +54,9 @@ create(owner: User, start: DateTime, end: DateTime) : returns (opening: Opening)
     returns opening
 
 publish(user: User, opening: Opening, audiences: Audiences) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -63,6 +66,9 @@ publish(user: User, opening: Opening, audiences: Audiences) : returns ()
     returns
 
 revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: Audiences) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -78,6 +84,9 @@ revise(user: User, opening: Opening, start: DateTime, end: DateTime, audiences: 
     returns
 
 withdraw(user: User, opening: Opening) : returns ()
+  where opening does not exist
+  then
+    refuses OPENING_NOT_FOUND "This opening cannot be found."
   where opening does not belong to user
   then
     refuses OPENING_FORBIDDEN "You cannot change this opening."
@@ -94,7 +103,7 @@ _owned(user: User) : many (opening: Opening, start: DateTime, end: DateTime, aud
   Returns the user's openings, including ended openings, ordered by start then end.
 
 _sharedWith(audience: Audience, from: DateTime, to: DateTime) : many (owner: User, start: DateTime, end: DateTime)
-  Returns still-current intervals clipped to the search range and current time. No rows for an empty range.
+  Returns still-current intervals shared with the audience and clipped to the search range and current time. No rows for an empty or reversed range.
 
 _sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)
   Returns the same intervals as one internal snapshot for server-side overlap calculation. Never exposed as a public endpoint.

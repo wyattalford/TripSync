@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { MongoClient, type Db } from "mongodb";
-import { assembleApplication } from "../src/assembly.ts";
-import { AuthenticatingConcept, UnknownSession } from "../src/concepts/Authenticating.ts";
-import { policy } from "../src/http.ts";
+import { assembleApplication } from "../../src/assembly.ts";
+import { AuthenticatingConcept, UnknownSession } from "../../src/concepts/Authenticating.ts";
+import { policy } from "../../src/http.ts";
 
 const configuredUrl = process.env.MONGODB_URL;
 if (!configuredUrl) throw new Error("MONGODB_URL is required for account tests.");
