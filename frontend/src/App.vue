@@ -4,7 +4,9 @@ import { api } from "./api.ts";
 import WeeklyCalendar from "./WeeklyCalendar.vue";
 import AuthPanel from "./AuthPanel.vue";
 import NoticesPanel from "./NoticesPanel.vue";
-import { badgeLabel, unreadCount, type NoticeSummary } from "./notices.ts";
+import AppHeader from "./AppHeader.vue";
+import { unreadCount, type NoticeSummary } from "./notices.ts";
+import { sectionFromLocation as sectionForUrl, sectionHref, type Section } from "./nav.ts";
 import { onSessionEnded } from "./session.ts";
 import { parseLocalOpeningTime, type CalendarSelection } from "./calendar.ts";
 
@@ -14,18 +16,19 @@ type Interval = { start: string; end: string };
 type PartialSuggestion = Interval & { availableCount: number; totalCount: number; unavailable: { user: string; username: string }[] };
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
-type Section = "groups" | "openings" | "shared-time" | "gatherings" | "notices";
-const sections: Section[] = ["groups", "openings", "shared-time", "gatherings", "notices"];
-
 function sectionFromLocation(): Section {
-  const hash = location.hash.slice(1);
-  const section = sections.find((item) => item === hash);
-  if (section) return section;
-  return location.pathname.startsWith("/gatherings/") ? "gatherings" : "groups";
+  return sectionForUrl(location.hash, location.pathname);
 }
 
 const activeSection = ref<Section>(sectionFromLocation());
 function syncSection() { activeSection.value = sectionFromLocation(); }
+
+// Main navigation: switch section, record it in the URL, and always start at the top of the page.
+function navigate(section: Section) {
+  if (location.pathname + location.hash !== sectionHref(section)) history.pushState({}, "", sectionHref(section));
+  activeSection.value = section;
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+}
 
 async function scrollToDestination() {
   if (!/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(location.pathname) || location.hash) return;
@@ -652,7 +655,10 @@ onUnmounted(() => {
 
 <template>
   <div class="app-shell">
-    <header class="site-header"><span class="wordmark">OpenTime</span></header>
+    <AppHeader
+      :signed-in="!!currentUsername" :username="currentUsername" :active="activeSection" :unread="unreadNotices" :busy="busy"
+      @navigate="navigate" @sign-out="signOut"
+    />
     <main class="content">
       <template v-if="currentUsername">
         <p class="eyebrow">Make time together</p>
@@ -663,15 +669,12 @@ onUnmounted(() => {
       <p v-if="message && !(currentUsername && activeSection === 'openings')" class="notice" :class="messageKind" role="status">{{ message }}</p>
       <p v-if="loading">Checking your account…</p>
       <section v-else-if="currentUsername" class="signed-in">
-        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2><button type="button" class="secondary" :disabled="busy" @click="signOut">Sign out</button></div>
-        <nav class="task-nav" aria-label="OpenTime sections">
-          <a href="#groups" :aria-current="activeSection === 'groups' ? 'page' : undefined">Groups</a><a href="#openings" :aria-current="activeSection === 'openings' ? 'page' : undefined">Your free time</a><a href="#shared-time" :aria-current="activeSection === 'shared-time' ? 'page' : undefined">Find shared time</a><a href="#gatherings" :aria-current="activeSection === 'gatherings' ? 'page' : undefined">Gatherings</a><a href="#notices" :aria-current="activeSection === 'notices' ? 'page' : undefined">Notices<span v-if="unreadNotices" class="nav-badge"><span class="visually-hidden">, </span>{{ badgeLabel(unreadNotices) }}<span class="visually-hidden"> unread</span></span></a>
-        </nav>
+        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2></div>
         <NoticesPanel
-          v-show="activeSection === 'notices'" id="notices" :notices="notices" :groups="groups" :gatherings="gatherings"
+          v-show="activeSection === 'notices'" id="section-notices" :notices="notices" :groups="groups" :gatherings="gatherings"
           :busy="busy" @open="openNotice" @mark-all-read="markAllNoticesRead"
         />
-        <div v-show="activeSection === 'groups'" class="group-layout" id="groups">
+        <div v-show="activeSection === 'groups'" class="group-layout" id="section-groups">
           <section class="status-panel">
             <h3>Your groups</h3>
             <p v-if="groups.length === 0">No groups yet. Create one or use an invitation link.</p>
@@ -724,7 +727,7 @@ onUnmounted(() => {
             </section>
           </div>
         </div>
-        <div v-show="activeSection === 'openings'" class="opening-layout" id="openings">
+        <div v-show="activeSection === 'openings'" class="opening-layout" id="section-openings">
           <p v-if="message && !openingEditorOpen" class="notice" :class="messageKind" role="status">{{ message }}</p>
           <WeeklyCalendar :openings="openings" :busy="busy" @select="selectOpenings" @edit="editOpening" @error="showMessage($event, 'error')" />
           <button type="button" class="secondary manual-opening" :disabled="busy" @click="addOpeningManually">Add an opening with exact times</button>
@@ -764,7 +767,7 @@ onUnmounted(() => {
             </form>
           </section>
         </div>
-        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="shared-time">
+        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="section-shared-time">
           <h3>Find shared time</h3>
           <p>Find free time shared with this group. If no time works for everyone, see when the most members are free.</p>
           <form @submit.prevent="findOverlap">
@@ -792,7 +795,7 @@ onUnmounted(() => {
             </template>
           </div>
         </section>
-        <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="gatherings">
+        <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="section-gatherings">
           <section class="status-panel" id="proposal-form">
             <h3>Propose a gathering</h3>
             <p>Choose current group members and specific details. A shared opening does not count as acceptance.</p>

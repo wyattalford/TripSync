@@ -45,7 +45,7 @@ function fullTime(iso: string) {
   <section class="status-panel notices-panel" aria-labelledby="notices-heading">
     <header class="notices-header">
       <div class="notices-title">
-        <h3 id="notices-heading">Notices</h3>
+        <h3 id="notices-heading">Notifications</h3>
         <span v-if="inbox.unread.length" class="count-tag">{{ inbox.unread.length }} new</span>
       </div>
       <button
