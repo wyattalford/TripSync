@@ -24,10 +24,10 @@ state
 
 actions
   register (username: String, password: String) : return (user: User)
-    where username and password are not blank,
-      and no user has the given username
+    where username is not blank, password is not blank and has
+      at least 8 characters, and no user has the normalized username
     then
-      create user with the given username and a securely derived
+      create user with the normalized username and a securely derived
         passwordVerifier for the supplied password
       return user
 
@@ -62,7 +62,7 @@ queries
     Returns the user's username, or no row.
 ```
 
-**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Session identifiers are virtually unguessable, expire after 30 minutes, and are carried by an HttpOnly cookie in browser requests. Password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions. `_byUsername` lets a reaction resolve a named group invitee without passing account details into Grouping; `_username` supplies the authenticated account's display name.
+**Notes.** Users and Sessions are introduced by this concept's state, so they do not need external type declarations. Usernames are normalized by trimming whitespace and lowercasing, both when stored and in every lookup (`signIn`, `_byUsername`), so "John" and "john" name the same account and a group invitation by username does not depend on capitalization. Session identifiers are virtually unguessable, expire after 30 minutes, and are carried by an HttpOnly cookie in browser requests. Password verifiers do not store plaintext passwords. OpenTime binds the external User types in its other concepts to Authenticating's User. Application reactions authenticate requests and check the resulting user's role before invoking protected actions. `_byUsername` lets a reaction resolve a named group invitee without passing account details into Grouping; `_username` supplies the authenticated account's display name.
 
 ## Grouping
 
@@ -540,6 +540,11 @@ actions
       if readAt is absent, set it to the current time
       return
 
+  markAllRead (user: User) : return ()
+    then
+      set readAt to the current time on every notice of user without readAt
+      return
+
 queries
   _inbox (user: User) : many (notice: Notice, message: String,
     destination: String, createdAt: DateTime, readAt?: DateTime)
@@ -547,7 +552,7 @@ queries
       order; no rows if absent.
 ```
 
-**Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying a group or gathering. Possessing that path does not grant access. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
+**Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying exactly one group or gathering (`/groups/<id>` or `/gatherings/<id>`); any other path is refused. Possessing that path does not grant access. `markAllRead` lets a recipient clear their unread notices at once; it never touches another user's notices. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
 
 **Implementation note.** The local implementation persists each notification event in a MongoDB outbox within the same transaction as its triggering Grouping or Gathering action. A background dispatcher calls Notifying for each recipient, marks an event delivered only after every recipient succeeds, and retries undelivered events. Notifying enforces a unique recipient and sourceKey pair so retries do not duplicate notices. This implements the causal notification reactions below while preserving the successful domain change if delivery fails. The inbox displays current authorized group or gathering state when a destination is opened.
 

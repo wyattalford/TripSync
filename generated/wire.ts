@@ -306,6 +306,15 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/notices/mark-all-read": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "markedRead": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/notices/mark-read": {
     input: {
       "notice": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Notifying"]["markRead"]>[0], ["notice"]>>;
@@ -646,6 +655,13 @@ export type OpenTimeWireHttp = {
     input: Record<string, never>;
     output: {
       "notices": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Notifying"]["_inbox"]>>>, ["notices"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/notices/mark-all-read": {
+    input: Record<string, never>;
+    output: {
+      "markedRead": true;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };

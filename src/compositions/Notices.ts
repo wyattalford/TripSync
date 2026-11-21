@@ -23,4 +23,13 @@ const MarkRead = endpoint(
   { ...options, input: { required: ["session", "notice"] } },
 );
 
-export const composition = { List, MarkRead };
+const MarkAllRead = endpoint(
+  "/notices/mark-all-read",
+  ({ session, user }) => receive({ session })
+    .then(Authenticating.authenticate({ session }).responds({ user }))
+    .then(Notifying.markAllRead({ user }).responds({}))
+    .then(respond({ markedRead: true })),
+  { ...options, input: { required: ["session"] } },
+);
+
+export const composition = { List, MarkRead, MarkAllRead };
