@@ -1,7 +1,7 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { now, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
-import { validateOpeningRequest } from "../openingValidation.ts";
+import { validateCalendarRequest, validateOpeningRequest } from "../openingValidation.ts";
 
 const { Authenticating, Grouping, AvailabilitySharing } = concepts;
 const options = { validators: { input: validateOpeningRequest } };
@@ -75,4 +75,17 @@ const FindOverlap = endpoint(
   { ...options, input: { required: ["session", "group", "from", "to", "duration"] } },
 );
 
-export const composition = { Create, Publish, Revise, Withdraw, Mine, FindOverlap };
+const Calendar = endpoint(
+  "/openings/calendar",
+  ({ session, group, from, to, duration, user, instant, timeline, windows, total }) => receive({ session, group, from, to, duration })
+    .then(Authenticating.authenticate({ session }).responds({ user }))
+    .then(
+      where(now(instant), AvailabilitySharing._calendarSnapshot({ user, group, from, to, duration, now: instant }).is({ allowed: true, timeline, windows, total }))
+        .then(respond({ timeline, windows, total })).named("member"),
+      where(now(instant), AvailabilitySharing._calendarSnapshot({ user, group, from, to, duration, now: instant }).is({ allowed: false }))
+        .then(respond({ error: "GROUP_FORBIDDEN" })).named("not-member"),
+    ),
+  { validators: { input: validateCalendarRequest }, input: { required: ["session", "group", "from", "to", "duration"] } },
+);
+
+export const composition = { Create, Publish, Revise, Withdraw, Mine, FindOverlap, Calendar };

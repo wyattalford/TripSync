@@ -70,6 +70,18 @@ describe("OpenTime opening boundary", () => {
     expect(new Date(overlap.overlaps[0]!.start).getTime()).toBeGreaterThanOrEqual(new Date(at(3)).getTime() - 5_000);
     expect(overlap.overlaps[0]!.end).toBe(to);
     expect(JSON.stringify(overlap)).not.toContain("owner");
+    const calendarResponse = await api(post("/openings/calendar", search, john));
+    expect(calendarResponse.status).toBe(200);
+    const calendar = await calendarResponse.json() as { timeline: { availableCount: number }[]; windows: { availableCount: number }[]; total: number };
+    expect(calendar.total).toBe(2);
+    expect(calendar.timeline.map((item) => item.availableCount)).toEqual([1, 2]);
+    expect(calendar.windows.some((item) => item.availableCount === 2)).toBe(true);
+    expect(JSON.stringify(calendar)).not.toContain("owner");
+    expect(JSON.stringify(calendar)).not.toContain("john");
+    expect(JSON.stringify(calendar)).not.toContain("walker");
+    expect((await api(post("/openings/calendar", search, noah))).status).toBe(403);
+    expect((await api(post("/openings/calendar", { ...search, from: "not-a-date" }, john))).status).toBe(400);
+    expect((await api(post("/openings/calendar", { ...search, duration: "60" }, john))).status).toBe(400);
     expect(JSON.stringify(await (await api(post("/openings/mine", {}, walker))).json())).not.toContain("purpose");
     expect((await api(post("/openings/overlap", search, noah))).status).toBe(403);
     const mine = await api(post("/openings/mine", {}, walker));
@@ -82,6 +94,7 @@ describe("OpenTime opening boundary", () => {
     expect(await (await api(post("/openings/overlap", search, john))).json()).toEqual({ overlaps: [], suggestions: [] });
     expect((await api(post("/groups/leave", { group }, walker))).status).toBe(200);
     expect((await api(post("/openings/overlap", search, walker))).status).toBe(403);
+    expect((await api(post("/openings/calendar", search, walker))).status).toBe(403);
   });
 
   test("serializes concurrent writes and updates overlaps after revision or withdrawal", async () => {
