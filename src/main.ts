@@ -1,11 +1,10 @@
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
-import { db, verifyTransactionSupport } from "./db.ts";
+import { db } from "./db.ts";
 import { policy } from "./http.ts";
 import { deliverPendingNotices } from "./noticeOutbox.ts";
 
-await verifyTransactionSupport();
 const application = assembleApplication();
 const gateway = createGateway({ application });
 const api = createHttpHandler({ application, gateway, policy });

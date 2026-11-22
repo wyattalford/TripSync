@@ -22,7 +22,7 @@ cp .env.example .env
 bun run dev
 ```
 
-The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `bun run db:up` initializes an authenticated single-node replica set for transaction tests without clearing the existing MongoDB volume. The local URI uses `directConnection=true` and `replicaSet=rs0`; copy the current `.env.example` if an older `.env` lacks those options. `MONGODB_URL` names the database; production uses the platform-provided connection string and `client.db()`. The hosted database must support MongoDB transactions before confirmation can be deployed. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
+The Vue development server is at `http://127.0.0.1:5173`. The backend is at `http://127.0.0.1:3000`; `GET /health` returns `{"status":"ok"}` when MongoDB is reachable. The project's MongoDB container uses local port 27018 so it can run beside another project using 27017. `bun run db:up` starts the existing authenticated local replica set; the app also runs on standalone MongoDB, as provided by the course. `MONGODB_URL` names the database; production uses the platform-provided connection string and `client.db()`. Browser sessions use a Secure, HttpOnly, SameSite=Strict cookie. Set `PUBLIC_ORIGIN` to the exact browser origin in deployment settings.
 
 To check the current project and run a production-style preview:
 
@@ -50,7 +50,7 @@ The course platform deploys a GitHub commit. The team has created the `opentime`
 | Port | `3000` |
 | Health check | `/health` |
 
-The platform MongoDB is configured to expose `MONGODB_URL`. `PUBLIC_ORIGIN` has been added; its saved value must be checked against the app's exact HTTPS origin, `https://opentime.mit-sdg.dev`, without a trailing slash. The platform supplies `HOST`, `PORT`, and `NODE_ENV`; do not copy local `.env` values into its settings. The server checks snapshot transaction support before serving requests, because confirmation and overlap search require it. A failed check prevents an unhealthy release from starting and appears in the deployment logs. Select the reviewed commit only after the local preview and checks pass, then smoke-test sign-in, an opening, a gathering confirmation, notices, and a reload at the public URL.
+The platform MongoDB is configured to expose `MONGODB_URL`. `PUBLIC_ORIGIN` has been added; its saved value must be checked against the app's exact HTTPS origin, `https://opentime.mit-sdg.dev`, without a trailing slash. The platform supplies `HOST`, `PORT`, and `NODE_ENV`; do not copy local `.env` values into its settings. Alpha uses conditional document updates and a single-process Gathering change queue; it does not require MongoDB transactions. Concurrent changes across multiple app instances can still produce conflicting commitments. Select the reviewed commit only after the local preview and checks pass, then smoke-test sign-in, an opening, a gathering confirmation, notices, and a reload at the public URL.
 
 ## Pitch
 

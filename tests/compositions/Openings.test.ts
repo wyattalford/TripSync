@@ -242,11 +242,11 @@ describe("OpenTime opening boundary", () => {
     expect(full.overlaps).toHaveLength(1);
     expect(full.suggestions).toEqual([]);
 
-    const snapshot = await readOverlapSnapshot(db, { user: john.user, ...search, now: new Date() }, async () => {
+    const refreshed = await readOverlapSnapshot(db, { user: john.user, ...search, now: new Date() }, async () => {
       await openings.withdraw({ user: eli.user, opening });
     });
-    expect(snapshot.overlaps).toHaveLength(1);
-    expect(snapshot.suggestions).toEqual([]);
+    expect(refreshed.overlaps).toEqual([]);
+    expect(refreshed.suggestions).toHaveLength(1);
     const after = await (await api(post("/openings/overlap", search, john.cookie))).json() as { overlaps: unknown[]; suggestions: unknown[] };
     expect(after.overlaps).toEqual([]);
     expect(after.suggestions).toHaveLength(1);

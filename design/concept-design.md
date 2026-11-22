@@ -497,7 +497,7 @@ queries
       Row order is unspecified.
 ```
 
-**Notes.** In OpenTime, Context is bound to Grouping's Group. Reactions check membership before supplying invitees, and Gathering never reads another concept's state. The implemented Gathering actions cover proposal, extra invitation, version-aware accept/decline, confirmation, editing, withdrawal, and cancellation. Confirmation, editing, accepting, withdrawing, and cancellation use MongoDB transactions that write a shared commitment control document before checking conflicts or changing confirmed attendance. This serializes commitment changes, including concurrent late acceptance into conflicting plans. Local MongoDB runs as an authenticated single-node replica set; hosted transaction support must be verified before deployment. Adding an invitee does not change existing acceptances. Accepting an already confirmed version immediately adds that person to its attendees. Editing creates a new version, preserves earlier versions and responses, resets invitees to PENDING, and returns the gathering to PROPOSED. Editing a confirmed gathering releases its previous commitments until the revised version is accepted and confirmed again. Requests include the version the user saw, preventing acceptance of unseen changes.
+**Notes.** In OpenTime, Context is bound to Grouping's Group. Reactions check membership before supplying invitees, and Gathering never reads another concept's state. The implemented Gathering actions cover proposal, extra invitation, version-aware accept/decline, confirmation, editing, withdrawal, and cancellation. For Alpha on the course's standalone MongoDB, Gathering serializes changes in one app process, checks conflicting commitments, and conditionally updates each gathering document. This prevents stale versions and ordinary sequential conflicts, but simultaneous changes on multiple app instances could still create overlapping commitments. Revisit that guarantee with the TA for Beta. Adding an invitee does not change existing acceptances. Accepting an already confirmed version immediately adds that person to its attendees. Editing creates a new version, preserves earlier versions and responses, resets invitees to PENDING, and returns the gathering to PROPOSED. Editing a confirmed gathering releases its previous commitments until the revised version is accepted and confirmed again. Requests include the version the user saw, preventing acceptance of unseen changes.
 When the last non-organizer attendee withdraws from a CONFIRMED gathering, it becomes CANCELLED only if no responses to its current version remain PENDING. Otherwise, it stays CONFIRMED so pending invitees can still accept and join. A proposal awaiting responses remains PROPOSED. Cancellation clears attendance and releases commitments without erasing responses or past versions. Cancelled gatherings cannot reopen. The organizer cancels rather than withdrawing.
 
 ## Notifying
@@ -554,7 +554,7 @@ queries
 
 **Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying exactly one group or gathering (`/groups/<id>` or `/gatherings/<id>`); any other path is refused. Possessing that path does not grant access. `markAllRead` lets a recipient clear their unread notices at once; it never touches another user's notices. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
 
-**Implementation note.** The local implementation persists each notification event in a MongoDB outbox within the same transaction as its triggering Grouping or Gathering action. A background dispatcher calls Notifying for each recipient, marks an event delivered only after every recipient succeeds, and retries undelivered events. Notifying enforces a unique recipient and sourceKey pair so retries do not duplicate notices. This implements the causal notification reactions below while preserving the successful domain change if delivery fails. The inbox displays current authorized group or gathering state when a destination is opened.
+**Implementation note.** Grouping and Gathering store pending notice events in their own documents with the triggering change. A background dispatcher passes them to Notifying and removes each event after delivery; failed delivery retries. Notifying deduplicates by recipient and sourceKey. The successful domain change remains valid if delivery fails.
 
 ## Essential Reactions
 
@@ -646,8 +646,8 @@ where
   Grouping._getGroup(group) returns status = ACTIVE and members
   user is in members, members contains at least two users,
     from is before to, and duration is positive
-  an internal snapshot read obtains membership, shared intervals,
-    and confirmed commitments at one database version
+  internal reads obtain current membership, shared intervals,
+    and confirmed commitments
   each member's usable intervals are the union of their shared intervals
     minus the union of their committed intervals
   overlaps are the intersection of every member's usable intervals,
@@ -659,11 +659,11 @@ then
     total count, and names of members without usable time there
 ```
 
-**Notes.** The MVP shows complete-group overlaps first. Only when none exist does it show the best partial-group times, naming members unavailable at each time. A member without a matching shared opening contributes no usable time. The response never includes individual opening intervals, audiences, or details of conflicting gatherings, but naming unavailable members reveals more than the original aggregate-only design. We should test this disclosure with users. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. The read coordinator obtains membership, openings, commitments, and display names in one MongoDB snapshot using one request-time instant. If that snapshot fails, search reports a retry error instead of returning a potentially mixed result.
+**Notes.** The MVP shows complete-group overlaps first. Only when none exist does it show the best partial-group times, naming members unavailable at each time. A member without a matching shared opening contributes no usable time. The response never includes individual opening intervals, audiences, or details of conflicting gatherings, but naming unavailable members reveals more than the original aggregate-only design. We should test this disclosure with users. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. Alpha reads membership, openings, commitments, and display names sequentially using one request-time instant. A concurrent change can make a displayed result stale; users review details and invitees decide whether to accept.
 
 ### Search for time with selected group members
 
-The authenticated requester chooses at least one distinct other current group member. The read coordinator checks both the requester's membership and every selected membership in the same snapshot it uses for shared openings and commitments. It automatically includes the requester and intersects only those members’ usable time. The response contains common intervals and has no partial fallback. A proposal started from a result preselects those invitees, who still choose whether to accept.
+The authenticated requester chooses at least one distinct other current group member. The read coordinator checks the requester's and selected members' membership before reading shared openings and commitments. It automatically includes the requester and intersects only those members’ usable time. The response contains common intervals and has no partial fallback. A proposal started from a result preselects those invitees, who still choose whether to accept.
 
 This lets someone plan with specific friends even when the largest available subset would omit them. A pair search can reveal when another member has shared an opening within the requester’s own shared time. The opening editor describes that disclosure, and the endpoint returns neither individual openings nor reasons for unavailability.
 
@@ -739,7 +739,7 @@ then
   Gathering.confirm(user, gathering, version, expectedAttendees)
 ```
 
-**Notes.** The organizer's view obtains version and accepted through `Gathering._get`. The request submits both, using accepted as expectedAttendees. Gathering checks the current version, accepted roster, and attendees' commitments atomically. If anything changed, confirmation does not occur and the organizer refreshes before retrying. Requests to decline, withdraw, or cancel follow the same authentication pattern and include gathering and the version shown to the requester. They invoke `Gathering.decline(user, gathering, version)`, `Gathering.withdraw(user, gathering, version)`, or `Gathering.cancel(user, gathering, version)`. Each action enforces its own role and status requirements.
+**Notes.** The organizer's view obtains version and accepted through `Gathering._get`. The request submits both, using accepted as expectedAttendees. Gathering checks commitments, then conditionally updates the current version and accepted roster in one document. If those details changed, confirmation does not occur and the organizer refreshes before retrying. Cross-instance commitment races remain an Alpha limitation. Requests to decline, withdraw, or cancel follow the same authentication pattern and include gathering and the version shown to the requester. They invoke `Gathering.decline(user, gathering, version)`, `Gathering.withdraw(user, gathering, version)`, or `Gathering.cancel(user, gathering, version)`. Each action enforces its own role and status requirements.
 
 ### View a gathering and flag changed willingness
 
