@@ -661,6 +661,12 @@ then
 
 **Notes.** The MVP shows complete-group overlaps first. Only when none exist does it show the best partial-group times, naming members unavailable at each time. A member without a matching shared opening contributes no usable time. The response never includes individual opening intervals, audiences, or details of conflicting gatherings, but naming unavailable members reveals more than the original aggregate-only design. We should test this disclosure with users. A changed opening or membership is reflected on the next calculation. Confirmed Gathering commitments mask conflicting time; edits, withdrawal, and cancellation release them. The read coordinator obtains membership, openings, commitments, and display names in one MongoDB snapshot using one request-time instant. If that snapshot fails, search reports a retry error instead of returning a potentially mixed result.
 
+### Search for time with selected group members
+
+The authenticated requester chooses at least one distinct other current group member. The read coordinator checks both the requester's membership and every selected membership in the same snapshot it uses for shared openings and commitments. It automatically includes the requester and intersects only those members’ usable time. The response contains common intervals and has no partial fallback. A proposal started from a result preselects those invitees, who still choose whether to accept.
+
+This lets someone plan with specific friends even when the largest available subset would omit them. A pair search can reveal when another member has shared an opening within the requester’s own shared time. The opening editor describes that disclosure, and the endpoint returns neither individual openings nor reasons for unavailability.
+
 ### Propose a gathering
 
 ```text

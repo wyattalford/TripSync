@@ -62,19 +62,20 @@ function ownedOpening(openings: Opening[], opening: string): Opening {
   return found;
 }
 
-async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, from: string, to: string, now: Date, session?: ClientSession) {
+async function sharedIntervals(owners: Collection<OwnerDocument>, audience: string, from: string, to: string, now: Date, session?: ClientSession, members?: string[]) {
   const lower = Math.max(instant(from)?.getTime() ?? Number.NaN, now.getTime());
   const upper = instant(to)?.getTime() ?? Number.NaN;
   if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) return [];
-  const found = await owners.find({ "openings.audiences": audience }, { session }).toArray();
+  const filter = { "openings.audiences": audience, ...(members && { _id: { $in: members } }) };
+  const found = await owners.find(filter, { session }).toArray();
   return found.flatMap((owner) => owner.openings.filter((opening) => opening.audiences.includes(audience))
     .map((opening) => ({ owner: owner._id, start: Math.max(opening.start.getTime(), lower), end: Math.min(opening.end.getTime(), upper) }))
     .filter(({ start, end }) => start < end)
     .map(({ owner: member, start, end }) => ({ owner: member, start: new Date(start).toISOString(), end: new Date(end).toISOString() })));
 }
 
-export function readSharedIntervals(db: Db, audience: string, from: string, to: string, now: Date, session?: ClientSession) {
-  return sharedIntervals(db.collection<OwnerDocument>("availabilitySharing.owners"), audience, from, to, now, session);
+export function readSharedIntervals(db: Db, audience: string, from: string, to: string, now: Date, session?: ClientSession, members?: string[]) {
+  return sharedIntervals(db.collection<OwnerDocument>("availabilitySharing.owners"), audience, from, to, now, session, members);
 }
 
 export class AvailabilitySharingConcept {
@@ -163,6 +164,13 @@ export class AvailabilitySharingConcept {
     user: string; group: string; from: string; to: string; duration: number; now: Date;
   }) {
     return readOverlapSnapshot(this.db, { user, group, from, to, duration, now });
+  }
+
+  async _selectedOverlapSnapshot(input: {
+    user: string; group: string; invitees: string[]; from: string; to: string; duration: number; now: Date;
+  }) {
+    const { allowed, overlaps } = await readOverlapSnapshot(this.db, input);
+    return { allowed, overlaps };
   }
 
   async _calendarSnapshot({ user, group, from, to, duration, now }: {

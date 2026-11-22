@@ -1,7 +1,7 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { now, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
-import { validateCalendarRequest, validateOpeningRequest } from "../openingValidation.ts";
+import { validateCalendarRequest, validateOpeningRequest, validateSelectedOverlapRequest } from "../openingValidation.ts";
 
 const { Authenticating, Grouping, AvailabilitySharing } = concepts;
 const options = { validators: { input: validateOpeningRequest } };
@@ -75,6 +75,19 @@ const FindOverlap = endpoint(
   { ...options, input: { required: ["session", "group", "from", "to", "duration"] } },
 );
 
+const FindSelectedOverlap = endpoint(
+  "/openings/selected-overlap",
+  ({ session, group, invitees, from, to, duration, user, instant, overlaps }) => receive({ session, group, invitees, from, to, duration })
+    .then(Authenticating.authenticate({ session }).responds({ user }))
+    .then(
+      where(now(instant), AvailabilitySharing._selectedOverlapSnapshot({ user, group, invitees, from, to, duration, now: instant })
+        .is({ allowed: true, overlaps })).then(respond({ overlaps })).named("member"),
+      where(now(instant), AvailabilitySharing._selectedOverlapSnapshot({ user, group, invitees, from, to, duration, now: instant })
+        .is({ allowed: false })).then(respond({ error: "GROUP_FORBIDDEN" })).named("ineligible"),
+    ),
+  { validators: { input: validateSelectedOverlapRequest }, input: { required: ["session", "group", "invitees", "from", "to", "duration"] } },
+);
+
 const Calendar = endpoint(
   "/openings/calendar",
   ({ session, group, from, to, duration, user, instant, timeline, windows, total }) => receive({ session, group, from, to, duration })
@@ -88,4 +101,4 @@ const Calendar = endpoint(
   { validators: { input: validateCalendarRequest }, input: { required: ["session", "group", "from", "to", "duration"] } },
 );
 
-export const composition = { Create, Publish, Revise, Withdraw, Mine, FindOverlap, Calendar };
+export const composition = { Create, Publish, Revise, Withdraw, Mine, FindOverlap, FindSelectedOverlap, Calendar };

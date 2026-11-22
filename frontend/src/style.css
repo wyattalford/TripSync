@@ -138,7 +138,7 @@ button.shared-segment:not(:disabled):hover { filter: brightness(.9); }
 .group-choices legend { font-weight: 700; }
 .group-choices .check-row { display: flex; min-height: 2.75rem; align-items: center; gap: .65rem; margin: .25rem 0; padding: .25rem 0; font-weight: 400; overflow-wrap: anywhere; }
 .group-choices .select-all-row { padding-bottom: .5rem; margin-bottom: .6rem; border-bottom: 1px solid #d6dfdb; font-weight: 700; }
-.group-choices input[type="checkbox"] { width: 1.25rem; height: 1.25rem; flex: 0 0 1.25rem; margin: 0; padding: 0; }
+.group-choices input:is([type="checkbox"], [type="radio"]) { width: 1.25rem; height: 1.25rem; flex: 0 0 1.25rem; margin: 0; padding: 0; }
 .opening-list { display: grid; gap: .75rem; padding: 0; margin: 1rem 0 0; list-style: none; }
 .opening-card { display: grid; min-width: 0; gap: .4rem; padding: .9rem; border: 1px solid #d6dfdb; border-radius: .5rem; overflow-wrap: anywhere; }
 .opening-card span { color: #526970; }

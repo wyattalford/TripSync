@@ -16,6 +16,7 @@ external Audience
 opaque Audiences
   The set of selected Audience identities for one opening.
 opaque SharedIntervals
+opaque SelectedUsers
   Intervals contributed to one audience by individual owners; internal to overlap calculation.
 opaque OwnedOpenings
   A user's openings with their details and selected audience identities.
@@ -24,9 +25,9 @@ opaque OverlapIntervals
 opaque PartialSuggestions
   Best intervals for the largest available subset when no full-group interval meets the duration, with counts and names of unavailable members.
 opaque AvailabilityTimeline
-  Continuous intervals with the count of current members available; no individual opening details. Counts can still make individual availability inferable in small groups.
+  Continuous intervals with the count of current members available; counts may reveal individual availability in small groups.
 opaque AvailabilityWindows
-  Intervals with the count of the same members available throughout for at least the requested duration; no member identities.
+  Intervals with the count of the same members available throughout for at least the requested duration.
 ```
 
 ## State
@@ -114,6 +115,9 @@ _sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime)
 
 _overlapSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)
   Uses the internal read coordinator to combine membership, openings, and commitments from one MongoDB snapshot. Returns full-group overlaps when present; otherwise the best partial-group suggestions. No rows of individual openings are exposed.
+
+_selectedOverlapSnapshot(user: User, group: Audience, invitees: SelectedUsers, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals)
+  Uses the same snapshot and interval computation. Rejects non-members and includes the requester automatically. Returns only common intervals among the requester and selected current members, using openings shared with the group.
 
 _calendarSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, timeline: AvailabilityTimeline, windows: AvailabilityWindows, total: Number)
   Uses one MongoDB snapshot to check current membership, count usable shared availability after confirmed commitments, and find continuous windows of at least duration minutes with the same available members. Returns counts only, never individual openings or member identities.
