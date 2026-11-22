@@ -82,7 +82,8 @@ describe("OpenTime in-app notices", () => {
     const walkerMessages = (await (await api(post("/notices/list", {}, walker.cookie))).json() as { notices: { message: string }[] }).notices.map((item) => item.message);
     expect(walkerMessages).toContain("Your gathering has been confirmed");
     expect(walkerMessages).toContain("A participant joined the confirmed gathering");
-    expect((await db.collection("notifying.outbox").countDocuments({ deliveredAt: { $exists: false } }))).toBe(0);
+    expect(await db.collection("grouping.groups").countDocuments({ "pendingNotices.0": { $exists: true } })).toBe(0);
+    expect(await db.collection("gathering.gatherings").countDocuments({ "pendingNotices.0": { $exists: true } })).toBe(0);
     await deliverPendingNotices(db);
     expect((await (await api(post("/notices/list", {}, walker.cookie))).json() as { notices: unknown[] }).notices).toHaveLength(walkerMessages.length);
   });
@@ -93,13 +94,13 @@ describe("OpenTime in-app notices", () => {
     const gatherings = new GatheringConcept(db);
     const created = await group.create({ owner: "john", name: "Friends" });
     await group.invite({ user: "john", group: created.group, invitee: "walker" });
-    const event = await db.collection<{ _id: string; destination: string; deliveredAt?: Date }>("notifying.outbox").findOne({});
+    const event = (await db.collection<{ _id: string; pendingNotices: { _id: string; destination: string }[] }>("grouping.groups").findOne({ _id: created.group }))?.pendingNotices[0];
     expect(event).toBeTruthy();
-    await db.collection<{ _id: string; destination: string }>("notifying.outbox").updateOne({ _id: event!._id }, { $set: { destination: "invalid" } });
+    await db.collection<{ _id: string }>("grouping.groups").updateOne({ _id: created.group }, { $set: { "pendingNotices.0.destination": "invalid" } });
     await deliverPendingNotices(db);
     expect((await notifying._inbox({ user: "walker" })).notices).toHaveLength(0);
-    expect((await db.collection("notifying.outbox").countDocuments({ deliveredAt: { $exists: false } }))).toBe(1);
-    await db.collection<{ _id: string; destination: string }>("notifying.outbox").updateOne({ _id: event!._id }, { $set: { destination: `/groups/${created.group}` } });
+    expect(await db.collection("grouping.groups").countDocuments({ "pendingNotices.0": { $exists: true } })).toBe(1);
+    await db.collection<{ _id: string }>("grouping.groups").updateOne({ _id: created.group }, { $set: { "pendingNotices.0.destination": `/groups/${created.group}` } });
     await deliverPendingNotices(db);
     expect((await notifying._inbox({ user: "walker" })).notices).toHaveLength(1);
     expect((await notifying.notify({ recipient: "walker", sourceKey: event!._id, message: "changed", destination: `/groups/${created.group}` })).notice)
