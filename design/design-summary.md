@@ -27,7 +27,7 @@ Our design responds to the following concerns from the [ethical analysis](proble
 
 ## Unclear Issues
 
-- **Overlaps for selected members:** Gatherings may invite a subset of a group's members, but overlap discovery currently requires a common opening across the entire group. We need to test whether this is useful enough or whether users need a way to find overlaps for selected members without creating another group.
+- **Overlaps for selected members:** Members can search for a time with specific current group members. The requester is always included and must pick at least one other person. Results contain common intervals only. In a two-person search someone can infer the other person’s availability within their own shared time. The opening editor explains this before sharing. We still need to observe whether people understand that disclosure and find the search useful.
 
 - **Notification volume:** Larger groups may generate too many notices. Testing should establish which changes people need to see and whether notification preferences or batching would help. The MVP uses the notices specified in the concept design.
 

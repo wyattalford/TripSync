@@ -55,7 +55,9 @@ async function focusFirstError() {
 }
 
 async function fail(step: AuthMode, error: string) {
-  const failure = authFailure(step, error);
+  const failure = import.meta.env.DEV && location.hostname === "localhost" && error === "FORBIDDEN"
+    ? { message: "Open the local app at http://127.0.0.1:5173 and try again." }
+    : authFailure(step, error);
   if (failure.field) fieldErrors.value = { [failure.field]: failure.message };
   else formError.value = failure.message;
   if (step === "sign-in") password.value = "";

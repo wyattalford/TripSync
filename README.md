@@ -9,6 +9,8 @@ OpenTime helps friends discover when invitations would be welcome and turn share
 
 The repository has the Sync Engine, MongoDB, and Vue/Vite foundation. Users can register, sign in, restore a session after reload, and sign out. They can create groups, invite registered users by username, accept or decline invitations, and explicitly join through an owner-shared link. Owners can remove people or close a group; members can leave. Users can create purpose-free dated openings, share them with all current groups or a selected subset, revise or withdraw them, and search for full-group overlaps by minimum duration. New groups are not added to an existing opening automatically. If no full-group time exists, search shows times for the largest available subset and names members without usable time there. An organizer can propose a gathering with a purpose to current group members, invite more members, edit details into a new version, confirm the exact accepted roster, and cancel. Invitees can accept or decline; an accepted invitee can withdraw, and a pending invitee can join an already confirmed plan. Editing requires fresh responses and reconfirmation. Confirmed commitments are subtracted from overlaps. An in-app inbox shows group invitation and Gathering notices, with read state and destination links. Notification events are durable and retried after delivery failure.
 
+[Generated API reference](generated/opentime.md) · [Alpha release status and validation](design/development-plan.md#8-alpha-release-status)
+
 ### Run locally
 
 Install Bun 1.4.2 and Podman with Compose. Start the Podman machine if needed, then run from the repository root:
