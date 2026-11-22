@@ -144,6 +144,61 @@ describe("OpenTime opening boundary", () => {
     }
   });
 
+  test("selected search requires current membership, includes the requester and reveals only common intervals", async () => {
+    const api = handler();
+    async function account(username: string) {
+      const { user } = await (await api(post("/auth/register", { username, password: "safe password" }))).json() as { user: string };
+      const signedIn = await api(post("/auth/sign-in", { username, password: "safe password" }));
+      return { user, cookie: signedIn.headers.get("set-cookie")!.split(";", 1)[0] };
+    }
+    const john = await account("john"), walker = await account("walker"), eli = await account("eli"), noah = await account("noah");
+    const call = (path: string, body: Record<string, unknown>, cookie = john.cookie) => api(post(path, body, cookie));
+    const { group } = await (await call("/groups/create", { name: "Friends" })).json() as { group: string };
+    for (const [username, member] of [["walker", walker], ["eli", eli]] as const) {
+      expect((await call("/groups/invite", { group, username })).status).toBe(200);
+      expect((await call("/groups/accept", { group }, member.cookie)).status).toBe(200);
+    }
+    expect((await call("/groups/invite", { group, username: "noah" })).status).toBe(200);
+
+    const from = at(3), to = at(5);
+    const search = { group, from, to, duration: 60 };
+    const path = "/openings/selected-overlap";
+    async function share(member: typeof john) {
+      const created = await call("/openings/create", { start: from, end: to }, member.cookie);
+      expect(created.status).toBe(200);
+      const { opening } = await created.json() as { opening: string };
+      expect((await call("/openings/publish", { opening, audiences: [group] }, member.cookie)).status).toBe(200);
+    }
+    await share(walker);
+    expect(await (await call(path, { ...search, invitees: [walker.user] })).json()).toEqual({ overlaps: [] });
+    await share(john);
+    expect(await (await call(path, { ...search, invitees: [walker.user] })).json()).toEqual({ overlaps: [{ start: from, end: to }] });
+    // An opening for the exact time stays invisible until its owner shares it with this group.
+    expect((await call("/openings/create", { start: from, end: to }, eli.cookie)).status).toBe(200);
+    expect(await (await call(path, { ...search, invitees: [walker.user, eli.user] })).json()).toEqual({ overlaps: [] });
+    expect((await api(post(path, { ...search, invitees: [walker.user] }))).status).toBe(401);
+    expect((await call(path, { ...search, invitees: [walker.user] }, noah.cookie)).status).toBe(403);
+    expect((await call(path, { ...search, invitees: [noah.user] })).status).toBe(403);
+    expect((await call(path, { ...search, invitees: [john.user] })).status).toBe(403);
+    for (const invitees of [[], [walker.user, walker.user], [false], walker.user]) {
+      expect((await call(path, { ...search, invitees })).status).toBe(400);
+    }
+    const proposed = await call("/gatherings/propose", {
+      group, invitees: [walker.user], start: from, end: to, purpose: "Study", activity: "Review notes", place: "Library",
+    });
+    expect(proposed.status).toBe(200);
+    const { gathering, version } = await proposed.json() as { gathering: string; version: string };
+    expect((await call("/gatherings/accept", { gathering, version }, walker.cookie)).status).toBe(200);
+    expect((await call("/gatherings/confirm", {
+      gathering, version, expectedAttendees: [john.user, walker.user],
+    })).status).toBe(200);
+    expect(await (await call(path, { ...search, invitees: [walker.user] })).json()).toEqual({ overlaps: [] });
+    expect((await call("/gatherings/cancel", { gathering, version })).status).toBe(200);
+    expect(await (await call(path, { ...search, invitees: [walker.user] })).json()).toEqual({ overlaps: [{ start: from, end: to }] });
+    expect((await call("/groups/remove", { group, username: "walker" })).status).toBe(200);
+    expect((await call(path, { ...search, invitees: [walker.user] })).status).toBe(403);
+  });
+
   test("returns the largest partial group only when no full-group time exists", async () => {
     const api = handler();
     async function account(username: string) {

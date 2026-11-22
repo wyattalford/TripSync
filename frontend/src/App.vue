@@ -59,6 +59,9 @@ const selectedOpeningEnded = computed(() => {
 const shareableGroups = computed(() => groups.value.filter((group) => group.membership === "MEMBER"));
 const allOpeningGroupsSelected = computed(() => shareableGroups.value.length > 0 && shareableGroups.value.every((group) => openingAudiences.value.includes(group.group)));
 const searchGroup = ref("");
+const searchScope = ref<"everyone" | "selected">("everyone");
+const searchInvitees = ref<string[]>([]);
+const searchMembers = computed(() => (rosters.value[searchGroup.value] ?? []).filter((member) => member.user !== currentUser.value));
 const searchFrom = ref("");
 const searchTo = ref("");
 const searchDuration = ref(60);
@@ -68,7 +71,7 @@ const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
 const notices = ref<NoticeSummary[]>([]);
 const unreadNotices = computed(() => unreadCount(notices.value));
-let noticeRefreshTimer: ReturnType<typeof setInterval> | undefined;
+let refreshTimer: ReturnType<typeof setInterval> | undefined;
 let stopSessionWatch: (() => void) | undefined;
 const extraInvitees = ref<Record<string, string>>({});
 const rosters = ref<Record<string, Member[]>>({});
@@ -79,6 +82,10 @@ const proposalActivity = ref("");
 const proposalPlace = ref("");
 const proposalStart = ref("");
 const proposalEnd = ref("");
+const proposalOverlap = ref("");
+const confirmationReview = ref<GatheringSummary | null>(null);
+let gatheringRefreshId = 0;
+let backgroundGatheringRefresh = false;
 const editingGathering = ref<GatheringSummary | null>(null);
 const editPurpose = ref("");
 const editActivity = ref("");
@@ -163,29 +170,56 @@ function memberName(group: string, user: string): string {
   return rosters.value[group]?.find((member) => member.user === user)?.username ?? (user === currentUser.value ? currentUsername.value : "Former member");
 }
 
-async function loadRoster(group: string) {
-  if (!group) return;
+async function loadRoster(group: string, quiet = false) {
+  const user = currentUser.value;
+  if (!group || !user) return;
   const result = await api.groups.members({ group });
+  if (currentUser.value !== user) return;
   if ("error" in result) {
-    showMessage(groupError(result.error), "error");
-    rosters.value[group] = [];
+    if (!quiet) {
+      showMessage(groupError(result.error), "error");
+      rosters.value[group] = [];
+    }
   } else rosters.value[group] = result.accounts;
 }
 
-async function refreshGatherings() {
+async function refreshGatherings(quiet = false) {
+  const requestId = ++gatheringRefreshId;
   const result = await api.gatherings.list();
-  if ("error" in result) return showMessage(gatheringError(result.error), "error");
+  if (requestId !== gatheringRefreshId || !currentUser.value) return false;
+  if ("error" in result) {
+    if (!quiet) showMessage(gatheringError(result.error), "error");
+    return false;
+  }
   gatherings.value = result.gatherings;
-  await Promise.all([...new Set(result.gatherings.map((gathering) => gathering.context))].map((group) => loadRoster(group)));
+  if (!result.gatherings.some((item) => item.gathering === confirmationReview.value?.gathering && item.status === "PROPOSED")) {
+    confirmationReview.value = null;
+  }
+  const contexts = new Set(result.gatherings.map((gathering) => gathering.context));
+  await Promise.all([...contexts].filter((group) => !quiet || !rosters.value[group]).map((group) => loadRoster(group, quiet)));
+  return true;
 }
 
-async function proposeFromOverlap(interval: Interval) {
+function refreshVisibleGatherings() {
+  if (!currentUser.value || activeSection.value !== "gatherings" || document.hidden || busy.value || backgroundGatheringRefresh) return;
+  backgroundGatheringRefresh = true;
+  void refreshGatherings(true)
+    .catch(() => { /* A later refresh will retry without interrupting the current task. */ })
+    .finally(() => { backgroundGatheringRefresh = false; });
+}
+
+async function proposeFromOverlap(interval: Interval | PartialSuggestion) {
   proposalGroup.value = searchGroup.value;
   proposalPurpose.value = "";
   proposalStart.value = localInput(interval.start);
   proposalEnd.value = localInput(interval.end);
-  location.hash = "gatherings";
-  syncSection();
+  proposalOverlap.value = "availableCount" in interval
+    ? `${interval.availableCount} of ${interval.totalCount} members had shared availability at this time.`
+    : searchScope.value === "selected"
+      ? "You and the selected members had shared availability at this time."
+      : "All group members had shared availability at this time.";
+  proposalInvitees.value = searchScope.value === "selected" ? [...searchInvitees.value] : [];
+  navigate("gatherings");
   await nextTick();
   document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
 }
@@ -265,14 +299,36 @@ async function saveGatheringEdit() {
   finally { busy.value = false; }
 }
 
+function reviewChanged(review: GatheringSummary, current: GatheringSummary): boolean {
+  return review.version !== current.version ||
+    !sameMembers(review.accepted, current.accepted) ||
+    !sameMembers(review.pending, current.pending);
+}
+
+function sameMembers(before: string[], after: string[]): boolean {
+  return before.length === after.length && before.every((member) => after.includes(member));
+}
+
 async function confirmGathering(gathering: GatheringSummary) {
+  const reviewed = confirmationReview.value;
+  const current = gatherings.value.find((item) => item.gathering === gathering.gathering);
+  if (busy.value || !reviewed || !current || current.status !== "PROPOSED" ||
+    reviewed.gathering !== current.gathering || reviewChanged(reviewed, current)) return;
   busy.value = true;
   try {
-    const result = await api.gatherings.confirm({ gathering: gathering.gathering, version: gathering.version, expectedAttendees: gathering.accepted });
+    const result = await api.gatherings.confirm({
+      gathering: reviewed.gathering, version: reviewed.version, expectedAttendees: reviewed.accepted,
+    });
     if ("error" in result) {
       await refreshGatherings();
+      const latest = gatherings.value.find((item) => item.gathering === reviewed.gathering);
+      if (latest && reviewChanged(reviewed, latest)) {
+        return showMessage("Responses or details changed. Review the current gathering before confirming.", "error");
+      }
+      confirmationReview.value = null;
       return showMessage(gatheringError(result.error), "error");
     }
+    confirmationReview.value = null;
     await refreshGatherings();
     searched.value = false;
     showMessage("Gathering confirmed for the accepted people.", "success");
@@ -330,8 +386,17 @@ async function cancelGathering(gathering: GatheringSummary) {
   finally { busy.value = false; }
 }
 
-watch(proposalGroup, (group) => { proposalInvitees.value = []; void loadRoster(group); });
-watch([searchGroup, searchFrom, searchTo, searchDuration], () => {
+watch(activeSection, refreshVisibleGatherings);
+watch([proposalGroup, proposalStart, proposalEnd], () => { proposalOverlap.value = ""; }, { flush: "sync" });
+watch(proposalGroup, (group) => { proposalInvitees.value = []; void loadRoster(group); }, { flush: "sync" });
+watch(searchGroup, (group) => {
+  searchInvitees.value = [];
+  if (searchScope.value === "selected") void loadRoster(group);
+});
+watch(searchScope, (scope) => {
+  if (scope === "selected") void loadRoster(searchGroup.value);
+});
+watch([searchGroup, searchFrom, searchTo, searchDuration, searchScope, searchInvitees], () => {
   overlaps.value = [];
   suggestions.value = [];
   searched.value = false;
@@ -473,10 +538,26 @@ async function findOverlap() {
   if (!searchGroup.value || !from || !to || from >= to || !Number.isFinite(searchDuration.value) || searchDuration.value <= 0) {
     return showMessage("Choose a group, valid range, and positive duration.", "error");
   }
+  if (searchScope.value === "selected" && !searchInvitees.value.length) {
+    return showMessage("Choose at least one other member to search with you.", "error");
+  }
   busy.value = true;
   try {
-    const result = await api.openings.overlap({ group: searchGroup.value, from, to, duration: searchDuration.value });
-    if ("error" in result) return showMessage(openingError(result.error), "error");
+    const search = { group: searchGroup.value, from, to, duration: searchDuration.value };
+    const selected = searchScope.value === "selected";
+    const result = selected
+      ? await api.openings["selected-overlap"]({ ...search, invitees: searchInvitees.value })
+        .then((response) => "error" in response ? response : { ...response, suggestions: [] })
+      : await api.openings.overlap(search);
+    if ("error" in result) {
+      if (selected && result.error === "FORBIDDEN") {
+        await refreshGroups();
+        await loadRoster(search.group);
+        searchInvitees.value = searchInvitees.value.filter((user) => searchMembers.value.some((member) => member.user === user));
+        return showMessage("Group membership changed. Check the group and selected people, then search again.", "error");
+      }
+      return showMessage(openingError(result.error), "error");
+    }
     overlaps.value = result.overlaps;
     suggestions.value = result.suggestions;
     searched.value = true;
@@ -501,7 +582,14 @@ function clearAccount() {
   groups.value = [];
   openings.value = [];
   resetOpeningForm();
+  gatheringRefreshId++;
   gatherings.value = [];
+  confirmationReview.value = null;
+  rosters.value = {};
+  proposalOverlap.value = "";
+  searchInvitees.value = [];
+  searchGroup.value = "";
+  searchScope.value = "everyone";
   notices.value = [];
 }
 
@@ -643,13 +731,20 @@ onMounted(() => {
   window.addEventListener("popstate", handleLocationChange);
   stopSessionWatch = onSessionEnded(handleSessionEnded);
   void refreshAccount();
-  noticeRefreshTimer = setInterval(() => { if (currentUser.value) void refreshNotices(); }, 5_000);
+  window.addEventListener("focus", refreshVisibleGatherings);
+  document.addEventListener("visibilitychange", refreshVisibleGatherings);
+  refreshTimer = setInterval(() => {
+    if (currentUser.value) void refreshNotices().catch(() => {});
+    refreshVisibleGatherings();
+  }, 5_000);
 });
 onUnmounted(() => {
   window.removeEventListener("hashchange", handleLocationChange);
   window.removeEventListener("popstate", handleLocationChange);
   stopSessionWatch?.();
-  if (noticeRefreshTimer) clearInterval(noticeRefreshTimer);
+  window.removeEventListener("focus", refreshVisibleGatherings);
+  document.removeEventListener("visibilitychange", refreshVisibleGatherings);
+  if (refreshTimer) clearInterval(refreshTimer);
 });
 </script>
 
@@ -757,7 +852,7 @@ onUnmounted(() => {
                 <label v-for="group in shareableGroups" :key="group.group" class="check-row">
                   <input v-model="openingAudiences" type="checkbox" :value="group.group" :disabled="busy" />{{ group.name }}
                 </label>
-                <p v-if="shareableGroups.length" class="field-hint">Only selected groups can use this free time. New groups are not added automatically.</p>
+                <p v-if="shareableGroups.length" class="field-hint">Only selected groups can use this free time. Members can include you in smaller searches and infer when your shared time overlaps theirs. New groups are not added automatically.</p>
               </fieldset>
               <div class="button-row">
                 <button v-if="!selectedOpeningEnded" type="submit" :disabled="busy">{{ openingId ? "Save changes" : `Save ${openingDrafts.length === 1 ? "opening" : "openings"}` }}</button>
@@ -769,7 +864,7 @@ onUnmounted(() => {
         </div>
         <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="section-shared-time">
           <h3>Find shared time</h3>
-          <p>Find free time shared with this group. If no time works for everyone, see when the most members are free.</p>
+          <p>Find a time for the whole group or choose who needs to be there.</p>
           <form @submit.prevent="findOverlap">
             <div class="search-fields">
               <div><label for="search-group">Group</label><select id="search-group" v-model="searchGroup" :disabled="busy" required><option value="" disabled>Choose a group</option><option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option></select></div>
@@ -777,11 +872,29 @@ onUnmounted(() => {
               <div><label for="search-to">Until</label><input id="search-to" v-model="searchTo" type="datetime-local" :disabled="busy" required /></div>
               <div><label for="search-duration">At least (minutes)</label><input id="search-duration" v-model.number="searchDuration" type="number" min="1" step="1" :disabled="busy" required /></div>
             </div>
-            <button type="submit" :disabled="busy">Find shared time</button>
+            <fieldset class="group-choices">
+              <legend>Who needs to be there?</legend>
+              <label class="check-row"><input v-model="searchScope" type="radio" value="everyone" :disabled="busy" /> Everyone in the group</label>
+              <label class="check-row"><input v-model="searchScope" type="radio" value="selected" :disabled="busy" /> You and selected members</label>
+              <template v-if="searchScope === 'selected'">
+                <p class="field-hint">You're included automatically. Choose at least one other person.</p>
+                <p v-if="!searchGroup">Choose a group to see its members.</p>
+                <p v-else-if="!rosters[searchGroup]" role="status">Loading current members…</p>
+                <p v-else-if="!searchMembers.length">This group has no other current members.</p>
+                <label v-for="member in searchMembers" :key="member.user" class="check-row">
+                  <input v-model="searchInvitees" type="checkbox" :value="member.user" :disabled="busy" />{{ member.username }}
+                </label>
+              </template>
+            </fieldset>
+            <button type="submit" :disabled="busy || (searchScope === 'selected' && !searchInvitees.length)">Find shared time</button>
           </form>
           <div v-if="searched" class="overlap-results" aria-live="polite">
             <h4>Suggested times</h4>
-            <p v-if="overlaps.length === 0 && suggestions.length === 0">No time fits at least two members for the requested duration.</p>
+            <template v-if="overlaps.length === 0 && suggestions.length === 0">
+              <p>{{ searchScope === 'selected' ? 'No shared time fits everyone you selected.' : 'No time fits at least two members for the requested duration.' }}</p>
+              <p>Try a wider date range, a shorter duration, or a different set of people above.</p>
+            </template>
+            <p v-else-if="searchScope === 'selected'">Times that work for you and {{ searchInvitees.length }} selected {{ searchInvitees.length === 1 ? 'member' : 'members' }}.</p>
             <ul v-if="overlaps.length"><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}
               <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
             </li></ul>
@@ -807,6 +920,7 @@ onUnmounted(() => {
               </select>
               <fieldset class="group-choices">
                 <legend>Invite people</legend>
+                <p v-if="proposalOverlap" class="field-hint">{{ proposalOverlap }} Each invitee still chooses whether to accept.</p>
                 <p v-if="proposalGroup && (rosters[proposalGroup] ?? []).filter((member) => member.user !== currentUser).length === 0">This group needs another member before you can propose.</p>
                 <label v-for="member in (rosters[proposalGroup] ?? []).filter((item) => item.user !== currentUser)" :key="member.user" class="check-row">
                   <input v-model="proposalInvitees" type="checkbox" :value="member.user" :disabled="busy" />{{ member.username }}
@@ -840,10 +954,24 @@ onUnmounted(() => {
                   <button v-if="gathering.myResponse === 'ACCEPTED'" type="button" class="secondary" :disabled="busy" @click="withdrawFromGathering(gathering)">Withdraw</button>
                 </div>
                 <div v-if="gathering.organizer === currentUser && new Date(gathering.start) > new Date()" class="button-row">
-                  <button v-if="gathering.status === 'PROPOSED' && gathering.accepted.length > 1" type="button" :disabled="busy" @click="confirmGathering(gathering)">Confirm accepted roster</button>
+                  <button v-if="gathering.status === 'PROPOSED' && gathering.accepted.length > 1 && confirmationReview?.gathering !== gathering.gathering" type="button" :disabled="busy" @click="confirmationReview = gathering">Review confirmation</button>
                   <button v-if="gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED'" type="button" class="secondary" :disabled="busy" @click="beginGatheringEdit(gathering)">Edit details</button>
                   <button v-if="gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED'" type="button" class="secondary" :disabled="busy" @click="cancelGathering(gathering)">Cancel gathering</button>
                 </div>
+                <fieldset v-if="confirmationReview?.gathering === gathering.gathering && new Date(gathering.start) > new Date()" class="group-choices">
+                  <legend>Review confirmation</legend>
+                  <div aria-live="polite">
+                    <p v-if="reviewChanged(confirmationReview, gathering)">Responses or details changed. Review the current roster before confirming.</p>
+                    <p><strong>Will be confirmed:</strong> {{ gathering.accepted.map((member) => memberName(gathering.context, member)).join(', ') }}</p>
+                    <p><strong>Will stay pending:</strong> {{ gathering.pending.map((member) => memberName(gathering.context, member)).join(', ') || 'No one' }}</p>
+                    <p v-if="gathering.accepted.length < 2">At least one invitee must accept before you can confirm.</p>
+                  </div>
+                  <div class="button-row">
+                    <button v-if="reviewChanged(confirmationReview, gathering)" type="button" :disabled="busy || gathering.accepted.length < 2" @click="confirmationReview = gathering">Review updated roster</button>
+                    <button v-else type="button" :disabled="busy || gathering.accepted.length < 2" @click="confirmGathering(gathering)">Confirm this roster</button>
+                    <button type="button" class="secondary" :disabled="busy" @click="confirmationReview = null">Close review</button>
+                  </div>
+                </fieldset>
                 <form v-if="gathering.organizer === currentUser && (gathering.status === 'PROPOSED' || gathering.status === 'CONFIRMED') && new Date(gathering.start) > new Date()" class="invite-extra" @submit.prevent="inviteToGathering(gathering)">
                   <label :for="`extra-${gathering.gathering}`">Invite another group member</label>
                   <select :id="`extra-${gathering.gathering}`" v-model="extraInvitees[gathering.gathering]" :disabled="busy" required>
@@ -854,7 +982,7 @@ onUnmounted(() => {
                 </form>
               </li>
             </ul>
-            <button type="button" class="secondary" :disabled="busy" @click="refreshGatherings">Refresh responses</button>
+            <button type="button" class="secondary" :disabled="busy" @click="refreshGatherings()">Refresh responses</button>
           </section>
         </div>
         <section v-if="editingGathering" v-show="activeSection === 'gatherings'" id="gathering-edit" class="status-panel gathering-edit-panel">

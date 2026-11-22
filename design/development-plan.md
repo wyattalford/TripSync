@@ -100,3 +100,11 @@ Remaining before the first Alpha checkpoint:
 1. Complete the John/Walker/Eli/Noah journey through the browser, including the edit confirmation and notices; inspect responsive layout and the most important error states. The automated boundary tests already cover privacy, stale versions and rosters, concurrent conflicts, and changed commitments.
 2. Verify transactions on the course-hosted MongoDB, check the saved `PUBLIC_ORIGIN`, deploy a reviewed commit to 6.1040 Apps, and smoke-test the public URL, production health check, and notice worker.
 3. Conduct representative user testing, make the highest-priority fixes, update the F3 design and progress evidence to match delivered behavior, and record the narrated F4 demonstration.
+
+## 8. Alpha release status
+
+Selected-member search and live confirmation review are implemented locally. Design and type checks, the production build, and all 123 tests passed. The selected-search regression test verifies that private openings and removed members cannot contribute to results and that confirmed commitments mask shared time.
+
+A local browser walkthrough verified no-match recovery, proposal handoff, and confirmation persistence. When a second invitee accepted through the local API during review, the organizer's browser showed the updated roster and required another review. After confirmation, the interval no longer appeared in the selected search.
+
+Before submission, deploy the reviewed commit, check the flow at phone width, and record the narrated walkthrough on the public build. Link the recording in the README and submit it with the public URL and commit SHA.

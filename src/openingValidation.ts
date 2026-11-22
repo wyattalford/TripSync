@@ -10,3 +10,13 @@ export function validateOpeningRequest(value: unknown): ValidationResult {
   }
   return { ok: true };
 }
+
+export function validateSelectedOverlapRequest(value: unknown): ValidationResult {
+  if (value === null || typeof value !== "object" || !("invitees" in value)) return { ok: false };
+  const { invitees, ...search } = value;
+  if (!Array.isArray(invitees) || invitees.length === 0 ||
+      !invitees.every((member) => typeof member === "string" && member.trim().length > 0) ||
+      new Set(invitees).size !== invitees.length) return { ok: false };
+  if (!("duration" in search) || typeof search.duration !== "number") return { ok: false };
+  return validateOpeningRequest(search);
+}
