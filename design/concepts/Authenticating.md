@@ -28,6 +28,7 @@ a set of Sessions with
   a user User
   an expiresAt DateTime
 
+Rule: Usernames are stored trimmed and lowercased; every username lookup applies the same normalization, so usernames are case-insensitive.
 Rule: Password verifiers are securely derived from passwords and do not contain plaintext passwords.
 Rule: Session identifiers are virtually unguessable and expire after 30 minutes.
 ```
@@ -36,19 +37,19 @@ Rule: Session identifiers are virtually unguessable and expire after 30 minutes.
 
 ```actions
 register(username: String, password: String) : returns (user: User)
-  where username or password is blank
+  where username is blank, or password is blank or shorter than 8 characters
   then
-    refuses INVALID_CREDENTIALS "A username and password are required."
-  where username already belongs to a user
+    refuses INVALID_CREDENTIALS "Enter a username and a password of at least 8 characters."
+  where the normalized username already belongs to a user
   then
     refuses USERNAME_TAKEN "That username is already registered."
-  where the inputs are valid and the username is unused
+  where the inputs are valid and the normalized username is unused
   then
-    add a user with username and a securely derived passwordVerifier
+    add a user with the normalized username and a securely derived passwordVerifier
     returns user
 
 signIn(username: String, password: String) : returns (session: Session, expiresAt: DateTime)
-  where no user has the username or the password does not match
+  where no user has the normalized username or the password does not match
   then
     refuses INVALID_CREDENTIALS "The username or password is incorrect."
   where a user has the username and the password matches
@@ -82,7 +83,7 @@ _exists(user: User) : one (exists: Flag)
   Answers whether user exists.
 
 _byUsername(username: String) : optional (user: User)
-  Answers the registered user with this username, or no row.
+  Answers the registered user with this normalized username, or no row.
 
 _username(user: User) : optional (username: String)
   Answers this user's username, or no row.

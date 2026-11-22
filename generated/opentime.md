@@ -15,7 +15,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 #### Actions
 
 - `register(username: String, password: String) : returns (user: User)`
-  - Refuses `INVALID_CREDENTIALS`: A username and password are required.
+  - Refuses `INVALID_CREDENTIALS`: Enter a username and a password of at least 8 characters.
   - Refuses `USERNAME_TAKEN`: That username is already registered.
 - `signIn(username: String, password: String) : returns (session: Session, expiresAt: DateTime)`
   - Refuses `INVALID_CREDENTIALS`: The username or password is incorrect.
@@ -169,6 +169,7 @@ Defined in [Notifying](../design/concepts/Notifying.md), line 1.
   - Refuses `INVALID_NOTICE`: A notice needs a source, message, and application destination.
 - `markRead(user: User, notice: Notice) : returns ()`
   - Refuses `NOTICE_FORBIDDEN`: This notice is not yours.
+- `markAllRead(user: User) : returns ()`
 
 #### Queries
 
@@ -1242,6 +1243,44 @@ then
   RequestBoundary.respond (notices, requestId)
 ```
 
+### OpenTime.Notices.MarkAllRead
+
+Authored path: `OpenTime.Notices.MarkAllRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 10.
+
+```reaction
+when RequestBoundary.request (path: "/notices/mark-all-read", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Notices.MarkAllRead#2
+
+Authored path: `OpenTime.Notices.MarkAllRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 10.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Notices.MarkAllRead
+then
+  Notifying.markAllRead (user)
+```
+
+### OpenTime.Notices.MarkAllRead#3
+
+Authored path: `OpenTime.Notices.MarkAllRead`.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 5.
+- Covered by [Notices composition](../design/compositions/Notices.md), line 10.
+
+```reaction
+when Notifying.markAllRead (user), asked by OpenTime.Notices.MarkAllRead#2
+where
+  earlier, RequestBoundary.request (path: "/notices/mark-all-read", requestId, session)
+then
+  RequestBoundary.respond (markedRead: true, requestId)
+```
+
 ### OpenTime.Notices.MarkRead
 
 Authored path: `OpenTime.Notices.MarkRead`.
@@ -1578,6 +1617,7 @@ not listed here have no explicit input contract.
 - `/groups/members` — requires `session`, `group`
 - `/groups/remove` — requires `session`, `group`, `username`
 - `/notices/list` — requires `session`
+- `/notices/mark-all-read` — requires `session`
 - `/notices/mark-read` — requires `session`, `notice`
 - `/openings/create` — requires `session`, `start`, `end`
 - `/openings/mine` — requires `session`

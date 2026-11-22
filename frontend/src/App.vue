@@ -2,28 +2,33 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "./api.ts";
 import WeeklyCalendar from "./WeeklyCalendar.vue";
+import AuthPanel from "./AuthPanel.vue";
+import NoticesPanel from "./NoticesPanel.vue";
+import AppHeader from "./AppHeader.vue";
+import { unreadCount, type NoticeSummary } from "./notices.ts";
+import { sectionFromLocation as sectionForUrl, sectionHref, type Section } from "./nav.ts";
+import { onSessionEnded } from "./session.ts";
 import { parseLocalOpeningTime, type CalendarSelection } from "./calendar.ts";
 
-type Mode = "sign-in" | "register";
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
 type Opening = { opening: string; start: string; end: string; audiences: string[] };
 type Interval = { start: string; end: string };
 type PartialSuggestion = Interval & { availableCount: number; totalCount: number; unavailable: { user: string; username: string }[] };
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
-type NoticeSummary = { notice: string; message: string; destination: string; createdAt: string; readAt: string | null };
-type Section = "groups" | "openings" | "shared-time" | "gatherings" | "notices";
-const sections: Section[] = ["groups", "openings", "shared-time", "gatherings", "notices"];
-
 function sectionFromLocation(): Section {
-  const hash = location.hash.slice(1);
-  const section = sections.find((item) => item === hash);
-  if (section) return section;
-  return location.pathname.startsWith("/gatherings/") ? "gatherings" : "groups";
+  return sectionForUrl(location.hash, location.pathname);
 }
 
 const activeSection = ref<Section>(sectionFromLocation());
 function syncSection() { activeSection.value = sectionFromLocation(); }
+
+// Main navigation: switch section, record it in the URL, and always start at the top of the page.
+function navigate(section: Section) {
+  if (location.pathname + location.hash !== sectionHref(section)) history.pushState({}, "", sectionHref(section));
+  activeSection.value = section;
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+}
 
 async function scrollToDestination() {
   if (!/^\/(groups|gatherings)\/[0-9a-f-]{36}$/.test(location.pathname) || location.hash) return;
@@ -36,9 +41,7 @@ function handleLocationChange() {
   void scrollToDestination();
 }
 
-const mode = ref<Mode>("sign-in");
-const username = ref("");
-const password = ref("");
+const sessionNotice = ref("");
 const currentUsername = ref("");
 const currentUser = ref("");
 const groups = ref<GroupSummary[]>([]);
@@ -64,7 +67,9 @@ const suggestions = ref<PartialSuggestion[]>([]);
 const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
 const notices = ref<NoticeSummary[]>([]);
+const unreadNotices = computed(() => unreadCount(notices.value));
 let noticeRefreshTimer: ReturnType<typeof setInterval> | undefined;
+let stopSessionWatch: (() => void) | undefined;
 const extraInvitees = ref<Record<string, string>>({});
 const rosters = ref<Record<string, Member[]>>({});
 const proposalGroup = ref("");
@@ -93,14 +98,6 @@ const messageKind = ref<"error" | "success">("success");
 function showMessage(text: string, kind: "error" | "success") {
   message.value = text;
   messageKind.value = kind;
-}
-
-function authError(error: string): string {
-  if (error === "CONFLICT") return "That username is already registered.";
-  if (error === "INVALID_REQUEST" && mode.value === "sign-in") return "The username or password is incorrect.";
-  if (error === "INVALID_REQUEST") return "Enter a username and password.";
-  if (error === "NETWORK_ERROR") return "OpenTime could not reach the server. Try again.";
-  return "OpenTime could not complete that request. Try again.";
 }
 
 function groupError(error: string): string {
@@ -134,6 +131,16 @@ async function refreshNotices() {
   const result = await api.notices.list();
   if ("error" in result) return;
   notices.value = result.notices;
+}
+
+async function markAllNoticesRead() {
+  busy.value = true;
+  try {
+    const result = await api.notices["mark-all-read"]();
+    if ("error" in result) return showMessage("Could not mark your notices read. Try again.", "error");
+    await refreshNotices();
+  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
+  finally { busy.value = false; }
 }
 
 async function openNotice(item: NoticeSummary) {
@@ -488,6 +495,30 @@ async function refreshGroups() {
   }
 }
 
+function clearAccount() {
+  currentUsername.value = "";
+  currentUser.value = "";
+  groups.value = [];
+  openings.value = [];
+  resetOpeningForm();
+  gatherings.value = [];
+  notices.value = [];
+}
+
+// Any protected request answered 401 means the session expired or was revoked: return to sign-in.
+function handleSessionEnded() {
+  if (!currentUser.value) return;
+  clearAccount();
+  message.value = "";
+  sessionNotice.value = "Your session ended after 30 minutes. Sign in again to continue.";
+}
+
+async function handleSignedIn() {
+  sessionNotice.value = "";
+  message.value = "";
+  await refreshAccount();
+}
+
 async function refreshAccount() {
   try {
     const result = await api.auth.current();
@@ -495,13 +526,7 @@ async function refreshAccount() {
     currentUser.value = "error" in result ? "" : result.user;
     if (currentUser.value) await Promise.all([refreshGroups(), refreshOpenings(), refreshGatherings(), refreshNotices()]);
   } catch {
-    currentUsername.value = "";
-    currentUser.value = "";
-    groups.value = [];
-    openings.value = [];
-    resetOpeningForm();
-    gatherings.value = [];
-    notices.value = [];
+    clearAccount();
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
     loading.value = false;
@@ -594,53 +619,18 @@ async function changeMembership(group: string, action: "leave" | "remove" | "clo
   finally { busy.value = false; }
 }
 
-async function submitAccount() {
-  const name = username.value.trim();
-  if (!name || !password.value.trim()) {
-    showMessage("Enter a username and password.", "error");
-    return;
-  }
-  busy.value = true;
-  message.value = "";
-  try {
-    if (mode.value === "register") {
-      const registered = await api.auth.register({ username: name, password: password.value });
-      if ("error" in registered) {
-        showMessage(authError(registered.error), "error");
-        return;
-      }
-    }
-    const signedIn = await api.auth["sign-in"]({ username: name, password: password.value });
-    if ("error" in signedIn) {
-      showMessage(authError(signedIn.error), "error");
-      return;
-    }
-    password.value = "";
-    await refreshAccount();
-    showMessage(mode.value === "register" ? "Account created." : "Signed in.", "success");
-  } catch {
-    showMessage("OpenTime could not reach the server. Try again.", "error");
-  } finally {
-    busy.value = false;
-  }
-}
-
 async function signOut() {
   busy.value = true;
   try {
     const result = await api.auth["sign-out"]();
-    if ("error" in result) {
+    // An already-expired session is effectively signed out, so only other errors are failures.
+    if ("error" in result && result.error !== "UNAUTHORIZED") {
       showMessage("Could not sign out. Try again.", "error");
       return;
     }
-    currentUsername.value = "";
-    currentUser.value = "";
-    groups.value = [];
-    openings.value = [];
-    resetOpeningForm();
-    gatherings.value = [];
-    notices.value = [];
-    showMessage("Signed out.", "success");
+    clearAccount();
+    sessionNotice.value = "";
+    message.value = "";
   } catch {
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
@@ -651,43 +641,40 @@ async function signOut() {
 onMounted(() => {
   window.addEventListener("hashchange", handleLocationChange);
   window.addEventListener("popstate", handleLocationChange);
+  stopSessionWatch = onSessionEnded(handleSessionEnded);
   void refreshAccount();
   noticeRefreshTimer = setInterval(() => { if (currentUser.value) void refreshNotices(); }, 5_000);
 });
 onUnmounted(() => {
   window.removeEventListener("hashchange", handleLocationChange);
   window.removeEventListener("popstate", handleLocationChange);
+  stopSessionWatch?.();
   if (noticeRefreshTimer) clearInterval(noticeRefreshTimer);
 });
 </script>
 
 <template>
   <div class="app-shell">
-    <header class="site-header"><span class="wordmark">OpenTime</span></header>
+    <AppHeader
+      :signed-in="!!currentUsername" :username="currentUsername" :active="activeSection" :unread="unreadNotices" :busy="busy"
+      @navigate="navigate" @sign-out="signOut"
+    />
     <main class="content">
-      <p class="eyebrow">Make time together</p>
-      <h1>Find an opening. Make a plan.</h1>
-      <p class="intro">Share when you are free with chosen groups, find a time that works, and decide together whether to meet.</p>
+      <template v-if="currentUsername">
+        <p class="eyebrow">Make time together</p>
+        <h1>Find an opening. Make a plan.</h1>
+        <p class="intro">Share when you are free with chosen groups, find a time that works, and decide together whether to meet.</p>
+      </template>
 
       <p v-if="message && !(currentUsername && activeSection === 'openings')" class="notice" :class="messageKind" role="status">{{ message }}</p>
       <p v-if="loading">Checking your account…</p>
       <section v-else-if="currentUsername" class="signed-in">
-        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2><button type="button" class="secondary" :disabled="busy" @click="signOut">Sign out</button></div>
-        <nav class="task-nav" aria-label="OpenTime sections">
-          <a href="#groups" :aria-current="activeSection === 'groups' ? 'page' : undefined">Groups</a><a href="#openings" :aria-current="activeSection === 'openings' ? 'page' : undefined">Your free time</a><a href="#shared-time" :aria-current="activeSection === 'shared-time' ? 'page' : undefined">Find shared time</a><a href="#gatherings" :aria-current="activeSection === 'gatherings' ? 'page' : undefined">Gatherings</a><a href="#notices" :aria-current="activeSection === 'notices' ? 'page' : undefined">Notices</a>
-        </nav>
-        <section v-show="activeSection === 'notices'" class="status-panel inbox-panel" id="notices">
-          <div class="group-heading"><h3>Your notices</h3><span>{{ notices.filter((item) => !item.readAt).length }} unread</span></div>
-          <p v-if="notices.length === 0">No notices yet.</p>
-          <ul v-else class="notice-list">
-            <li v-for="item in notices" :key="item.notice" :class="{ unread: !item.readAt }">
-              <p>{{ item.message }}</p>
-              <span>{{ localTime(item.createdAt) }} · {{ item.readAt ? 'Read' : 'Unread' }}</span>
-              <button type="button" class="secondary" @click="openNotice(item)">Review current details</button>
-            </li>
-          </ul>
-        </section>
-        <div v-show="activeSection === 'groups'" class="group-layout" id="groups">
+        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2></div>
+        <NoticesPanel
+          v-show="activeSection === 'notices'" id="section-notices" :notices="notices" :groups="groups" :gatherings="gatherings"
+          :busy="busy" @open="openNotice" @mark-all-read="markAllNoticesRead"
+        />
+        <div v-show="activeSection === 'groups'" class="group-layout" id="section-groups">
           <section class="status-panel">
             <h3>Your groups</h3>
             <p v-if="groups.length === 0">No groups yet. Create one or use an invitation link.</p>
@@ -740,7 +727,7 @@ onUnmounted(() => {
             </section>
           </div>
         </div>
-        <div v-show="activeSection === 'openings'" class="opening-layout" id="openings">
+        <div v-show="activeSection === 'openings'" class="opening-layout" id="section-openings">
           <p v-if="message && !openingEditorOpen" class="notice" :class="messageKind" role="status">{{ message }}</p>
           <WeeklyCalendar :openings="openings" :busy="busy" @select="selectOpenings" @edit="editOpening" @error="showMessage($event, 'error')" />
           <button type="button" class="secondary manual-opening" :disabled="busy" @click="addOpeningManually">Add an opening with exact times</button>
@@ -780,7 +767,7 @@ onUnmounted(() => {
             </form>
           </section>
         </div>
-        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="shared-time">
+        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="section-shared-time">
           <h3>Find shared time</h3>
           <p>Find free time shared with this group. If no time works for everyone, see when the most members are free.</p>
           <form @submit.prevent="findOverlap">
@@ -808,7 +795,7 @@ onUnmounted(() => {
             </template>
           </div>
         </section>
-        <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="gatherings">
+        <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="section-gatherings">
           <section class="status-panel" id="proposal-form">
             <h3>Propose a gathering</h3>
             <p>Choose current group members and specific details. A shared opening does not count as acceptance.</p>
@@ -885,20 +872,7 @@ onUnmounted(() => {
           </form>
         </section>
       </section>
-      <section v-else class="status-panel">
-        <div class="mode-switch" aria-label="Account action">
-          <button type="button" :aria-pressed="mode === 'sign-in'" @click="mode = 'sign-in'; message = ''">Sign in</button>
-          <button type="button" :aria-pressed="mode === 'register'" @click="mode = 'register'; message = ''">Register</button>
-        </div>
-        <h2>{{ mode === "sign-in" ? "Welcome back" : "Create an account" }}</h2>
-        <form @submit.prevent="submitAccount">
-          <label for="username">Username</label>
-          <input id="username" v-model="username" name="username" autocomplete="username" required :disabled="busy" />
-          <label for="password">Password</label>
-          <input id="password" v-model="password" name="password" type="password" :autocomplete="mode === 'sign-in' ? 'current-password' : 'new-password'" required :disabled="busy" />
-          <button type="submit" :disabled="busy">{{ busy ? "Please wait…" : mode === "sign-in" ? "Sign in" : "Create account" }}</button>
-        </form>
-      </section>
+      <AuthPanel v-else :notice="sessionNotice" @signed-in="handleSignedIn" />
     </main>
   </div>
 </template>
