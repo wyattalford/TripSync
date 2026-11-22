@@ -13,8 +13,6 @@ import { parseLocalOpeningTime, type CalendarSelection } from "./calendar.ts";
 
 type GroupSummary = { group: string; name: string; owner: string; membership: string; memberCount: number };
 type Opening = { opening: string; start: string; end: string; audiences: string[] };
-type Interval = { start: string; end: string };
-type PartialSuggestion = Interval & { availableCount: number; totalCount: number; unavailable: { user: string; username: string }[] };
 type Member = { user: string; username: string };
 type GatheringSummary = { gathering: string; organizer: string; context: string; version: string; number: number; purpose: string; activity: string; place: string; start: string; end: string; status: string; myResponse: string; invitees: string[]; accepted: string[]; pending: string[]; declined: string[]; withdrawn: string[]; attendees: string[] };
 function sectionFromLocation(): Section {
@@ -59,16 +57,6 @@ const selectedOpeningEnded = computed(() => {
 });
 const shareableGroups = computed(() => groups.value.filter((group) => group.membership === "MEMBER"));
 const allOpeningGroupsSelected = computed(() => shareableGroups.value.length > 0 && shareableGroups.value.every((group) => openingAudiences.value.includes(group.group)));
-const searchGroup = ref("");
-const searchScope = ref<"everyone" | "selected">("everyone");
-const searchInvitees = ref<string[]>([]);
-const searchMembers = computed(() => (rosters.value[searchGroup.value] ?? []).filter((member) => member.user !== currentUser.value));
-const searchFrom = ref("");
-const searchTo = ref("");
-const searchDuration = ref(60);
-const overlaps = ref<Interval[]>([]);
-const suggestions = ref<PartialSuggestion[]>([]);
-const searched = ref(false);
 const gatherings = ref<GatheringSummary[]>([]);
 const notices = ref<NoticeSummary[]>([]);
 const unreadNotices = computed(() => unreadCount(notices.value));
@@ -209,29 +197,14 @@ function refreshVisibleGatherings() {
     .finally(() => { backgroundGatheringRefresh = false; });
 }
 
-async function proposeFromOverlap(interval: Interval | PartialSuggestion) {
-  proposalGroup.value = searchGroup.value;
-  proposalPurpose.value = "";
-  proposalStart.value = localInput(interval.start);
-  proposalEnd.value = localInput(interval.end);
-  proposalOverlap.value = "availableCount" in interval
-    ? `${interval.availableCount} of ${interval.totalCount} members had shared availability at this time.`
-    : searchScope.value === "selected"
-      ? "You and the selected members had shared availability at this time."
-      : "All group members had shared availability at this time.";
-  proposalInvitees.value = searchScope.value === "selected" ? [...searchInvitees.value] : [];
-  navigate("gatherings");
-  await nextTick();
-  document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
-}
-
-async function proposeFromCalendar(group: string, interval: { start: string; end: string; availableCount: number }) {
+async function proposeFromCalendar(group: string, interval: { start: string; end: string; availableCount: number }, invitees: string[]) {
   proposalGroup.value = group;
   proposalPurpose.value = "";
   proposalStart.value = localInput(interval.start);
   proposalEnd.value = localInput(interval.end);
-  proposalOverlap.value = `${interval.availableCount} group members had shared availability at this time.`;
-  proposalInvitees.value = [];
+  proposalOverlap.value = invitees.length ? "You and the selected members had shared availability at this time."
+    : `${interval.availableCount} group members had shared availability at this time.`;
+  proposalInvitees.value = invitees;
   navigate("gatherings");
   await nextTick();
   document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
@@ -267,7 +240,6 @@ async function respondGathering(gathering: GatheringSummary, action: "accept" | 
       : await api.gatherings.decline({ gathering: gathering.gathering, version: gathering.version });
     if ("error" in result) return showMessage(gatheringError(result.error), "error");
     await refreshGatherings();
-    if (action === "accept" && "joined" in result && result.joined) searched.value = false;
     showMessage(action === "decline" ? "You declined these details."
       : "joined" in result && result.joined ? "You joined the confirmed gathering." : "You accepted these details. The organizer can confirm when ready.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
@@ -306,7 +278,6 @@ async function saveGatheringEdit() {
     }
     cancelGatheringEdit();
     await refreshGatherings();
-    searched.value = false;
     showMessage("New version saved. Previous responses and confirmed commitments no longer apply. Invitees need to respond again.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
@@ -343,7 +314,6 @@ async function confirmGathering(gathering: GatheringSummary) {
     }
     confirmationReview.value = null;
     await refreshGatherings();
-    searched.value = false;
     showMessage("Gathering confirmed for the accepted people.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
@@ -376,7 +346,6 @@ async function withdrawFromGathering(gathering: GatheringSummary) {
       return showMessage(gatheringError(result.error), "error");
     }
     await refreshGatherings();
-    searched.value = false;
     showMessage(result.status === "CANCELLED" ? "You withdrew. The gathering closed because no one else is attending or pending." : "You withdrew from this gathering.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
@@ -393,7 +362,6 @@ async function cancelGathering(gathering: GatheringSummary) {
     }
     if (editingGathering.value?.gathering === gathering.gathering) cancelGatheringEdit();
     await refreshGatherings();
-    searched.value = false;
     showMessage("Gathering cancelled. Its confirmed commitments were released.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
@@ -402,18 +370,6 @@ async function cancelGathering(gathering: GatheringSummary) {
 watch(activeSection, refreshVisibleGatherings);
 watch([proposalGroup, proposalStart, proposalEnd], () => { proposalOverlap.value = ""; }, { flush: "sync" });
 watch(proposalGroup, (group) => { proposalInvitees.value = []; void loadRoster(group); }, { flush: "sync" });
-watch(searchGroup, (group) => {
-  searchInvitees.value = [];
-  if (searchScope.value === "selected") void loadRoster(group);
-});
-watch(searchScope, (scope) => {
-  if (scope === "selected") void loadRoster(searchGroup.value);
-});
-watch([searchGroup, searchFrom, searchTo, searchDuration, searchScope, searchInvitees], () => {
-  overlaps.value = [];
-  suggestions.value = [];
-  searched.value = false;
-});
 
 function localTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -492,7 +448,6 @@ async function saveOpening() {
           return showMessage(`${saved ? `${saved} opening${saved === 1 ? "" : "s"} saved. ` : ""}${openingError(created.error)}`, "error");
         }
         saved++;
-        searched.value = false;
         openingDrafts.value.shift();
         if (openingAudiences.value.length > 0) {
           const shared = await api.openings.publish({ opening: created.opening, audiences: openingAudiences.value });
@@ -505,7 +460,6 @@ async function saveOpening() {
       }
       resetOpeningForm();
       await refreshOpenings();
-      searched.value = false;
       showMessage(`${saved} opening${saved === 1 ? "" : "s"} saved.`, "success");
     } catch {
       await refreshOpenings();
@@ -526,7 +480,6 @@ async function saveOpening() {
     showMessage("Opening updated.", "success");
     resetOpeningForm();
     await refreshOpenings();
-    searched.value = false;
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
 }
@@ -539,42 +492,7 @@ async function withdrawOpening(opening: string) {
     if ("error" in result) return showMessage(openingError(result.error), "error");
     if (openingId.value === opening) resetOpeningForm();
     await refreshOpenings();
-    searched.value = false;
     showMessage("Opening withdrawn.", "success");
-  } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
-  finally { busy.value = false; }
-}
-
-async function findOverlap() {
-  const from = absoluteTime(searchFrom.value);
-  const to = absoluteTime(searchTo.value);
-  if (!searchGroup.value || !from || !to || from >= to || !Number.isFinite(searchDuration.value) || searchDuration.value <= 0) {
-    return showMessage("Choose a group, valid range, and positive duration.", "error");
-  }
-  if (searchScope.value === "selected" && !searchInvitees.value.length) {
-    return showMessage("Choose at least one other member to search with you.", "error");
-  }
-  busy.value = true;
-  try {
-    const search = { group: searchGroup.value, from, to, duration: searchDuration.value };
-    const selected = searchScope.value === "selected";
-    const result = selected
-      ? await api.openings["selected-overlap"]({ ...search, invitees: searchInvitees.value })
-        .then((response) => "error" in response ? response : { ...response, suggestions: [] })
-      : await api.openings.overlap(search);
-    if ("error" in result) {
-      if (selected && result.error === "FORBIDDEN") {
-        await refreshGroups();
-        await loadRoster(search.group);
-        searchInvitees.value = searchInvitees.value.filter((user) => searchMembers.value.some((member) => member.user === user));
-        return showMessage("Group membership changed. Check the group and selected people, then search again.", "error");
-      }
-      return showMessage(openingError(result.error), "error");
-    }
-    overlaps.value = result.overlaps;
-    suggestions.value = result.suggestions;
-    searched.value = true;
-    showMessage("Shared times updated.", "success");
   } catch { showMessage("OpenTime could not reach the server. Try again.", "error"); }
   finally { busy.value = false; }
 }
@@ -600,9 +518,6 @@ function clearAccount() {
   confirmationReview.value = null;
   rosters.value = {};
   proposalOverlap.value = "";
-  searchInvitees.value = [];
-  searchGroup.value = "";
-  searchScope.value = "everyone";
   notices.value = [];
 }
 
@@ -875,53 +790,7 @@ onUnmounted(() => {
             </form>
           </section>
         </div>
-        <SharedCalendar v-show="activeSection === 'shared-time'" :active="activeSection === 'shared-time'" :groups="groups" :busy="busy" @propose="proposeFromCalendar" />
-        <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="section-shared-time">
-          <h3>Find time for selected people</h3>
-          <p>Find a time for the whole group or choose who needs to be there.</p>
-          <form @submit.prevent="findOverlap">
-            <div class="search-fields">
-              <div><label for="search-group">Group</label><select id="search-group" v-model="searchGroup" :disabled="busy" required><option value="" disabled>Choose a group</option><option v-for="group in groups.filter((item) => item.membership === 'MEMBER')" :key="group.group" :value="group.group">{{ group.name }}</option></select></div>
-              <div><label for="search-from">From</label><input id="search-from" v-model="searchFrom" type="datetime-local" :disabled="busy" required /></div>
-              <div><label for="search-to">Until</label><input id="search-to" v-model="searchTo" type="datetime-local" :disabled="busy" required /></div>
-              <div><label for="search-duration">At least (minutes)</label><input id="search-duration" v-model.number="searchDuration" type="number" min="1" step="1" :disabled="busy" required /></div>
-            </div>
-            <fieldset class="group-choices">
-              <legend>Who needs to be there?</legend>
-              <label class="check-row"><input v-model="searchScope" type="radio" value="everyone" :disabled="busy" /> Everyone in the group</label>
-              <label class="check-row"><input v-model="searchScope" type="radio" value="selected" :disabled="busy" /> You and selected members</label>
-              <template v-if="searchScope === 'selected'">
-                <p class="field-hint">You're included automatically. Choose at least one other person.</p>
-                <p v-if="!searchGroup">Choose a group to see its members.</p>
-                <p v-else-if="!rosters[searchGroup]" role="status">Loading current members…</p>
-                <p v-else-if="!searchMembers.length">This group has no other current members.</p>
-                <label v-for="member in searchMembers" :key="member.user" class="check-row">
-                  <input v-model="searchInvitees" type="checkbox" :value="member.user" :disabled="busy" />{{ member.username }}
-                </label>
-              </template>
-            </fieldset>
-            <button type="submit" :disabled="busy || (searchScope === 'selected' && !searchInvitees.length)">Find shared time</button>
-          </form>
-          <div v-if="searched" class="overlap-results" aria-live="polite">
-            <h4>Suggested times</h4>
-            <template v-if="overlaps.length === 0 && suggestions.length === 0">
-              <p>{{ searchScope === 'selected' ? 'No shared time fits everyone you selected.' : 'No time fits at least two members for the requested duration.' }}</p>
-              <p>Try a wider date range, a shorter duration, or a different set of people above.</p>
-            </template>
-            <p v-else-if="searchScope === 'selected'">Times that work for you and {{ searchInvitees.length }} selected {{ searchInvitees.length === 1 ? 'member' : 'members' }}.</p>
-            <ul v-if="overlaps.length"><li v-for="interval in overlaps" :key="interval.start + interval.end">{{ localTime(interval.start) }} – {{ localTime(interval.end) }}
-              <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
-            </li></ul>
-            <template v-if="suggestions.length">
-              <p>Best partial-group times. These are suggestions, not commitments. You can still invite someone who has no usable time; they decide whether to accept.</p>
-              <ul><li v-for="interval in suggestions" :key="interval.start + interval.end">
-                {{ localTime(interval.start) }} – {{ localTime(interval.end) }} · {{ interval.availableCount }} of {{ interval.totalCount }} members are available.
-                No usable time: {{ interval.unavailable.map((member) => member.username).join(', ') }}.
-                <button type="button" class="secondary" :disabled="busy" @click="proposeFromOverlap(interval)">Propose this time</button>
-              </li></ul>
-            </template>
-          </div>
-        </section>
+        <SharedCalendar v-show="activeSection === 'shared-time'" id="section-shared-time" :active="activeSection === 'shared-time'" :groups="groups" :current-user="currentUser" :busy="busy" @propose="proposeFromCalendar" />
         <div v-show="activeSection === 'gatherings'" class="gathering-layout" id="section-gatherings">
           <section class="status-panel" id="proposal-form">
             <h3>Propose a gathering</h3>
