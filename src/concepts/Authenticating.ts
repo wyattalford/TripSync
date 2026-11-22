@@ -23,6 +23,12 @@ export async function readUsernames(db: Db, users: string[], session?: ClientSes
 }
 
 const SESSION_LIFETIME_MS = 30 * 60 * 1000;
+export const MIN_PASSWORD_LENGTH = 8;
+
+/** Usernames are case-insensitive and ignore surrounding whitespace. */
+export function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
+}
 
 async function ensureIndexes(
   users: Collection<UserDocument>,
@@ -42,9 +48,10 @@ export class AuthenticatingConcept {
     this.sessions = db.collection<SessionDocument>("authenticating.sessions");
   }
 
-  async register({ username, password }: { username: string; password: string }) {
-    if (username.trim() === "" || password.trim() === "") {
-      throw new InvalidCredentials("A username and password are required.");
+  async register({ username: requested, password }: { username: string; password: string }) {
+    const username = normalizeUsername(requested);
+    if (username === "" || password.trim() === "" || password.length < MIN_PASSWORD_LENGTH) {
+      throw new InvalidCredentials("Enter a username and a password of at least 8 characters.");
     }
     await ensureIndexes(this.users, this.sessions);
     const user = crypto.randomUUID();
@@ -61,7 +68,7 @@ export class AuthenticatingConcept {
   }
 
   async signIn({ username, password }: { username: string; password: string }) {
-    const account = await this.users.findOne({ username });
+    const account = await this.users.findOne({ username: normalizeUsername(username) });
     if (!account || !(await Bun.password.verify(password, account.passwordVerifier))) {
       throw new InvalidCredentials("The username or password is incorrect.");
     }
@@ -95,7 +102,7 @@ export class AuthenticatingConcept {
   }
 
   async _byUsername({ username }: { username: string }) {
-    const account = await this.users.findOne({ username }, { projection: { _id: 1 } });
+    const account = await this.users.findOne({ username: normalizeUsername(username) }, { projection: { _id: 1 } });
     return account ? [{ user: account._id }] : [];
   }
 

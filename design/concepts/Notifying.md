@@ -27,6 +27,8 @@ a set of Notices with
   a createdAt DateTime
   an optional readAt DateTime
   unique recipient and sourceKey
+
+Rule: A destination is an application path naming exactly one group or gathering, such as /groups/<id> or /gatherings/<id>.
 ```
 
 ## Actions
@@ -51,6 +53,12 @@ markRead(user: User, notice: Notice) : returns ()
   where notice belongs to user
   then
     set readAt if absent
+    returns
+
+markAllRead(user: User) : returns ()
+  where always
+  then
+    set readAt to now on every notice of user that has no readAt
     returns
 ```
 

@@ -13,6 +13,13 @@ type NoticeDocument = {
   readAt?: Date;
 };
 
+// A destination names exactly one group or gathering in the application.
+const DESTINATION = /^\/(groups|gatherings)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export function isNoticeDestination(destination: string): boolean {
+  return DESTINATION.test(destination);
+}
+
 export class NotifyingConcept {
   private readonly notices: Collection<NoticeDocument>;
 
@@ -21,7 +28,7 @@ export class NotifyingConcept {
   }
 
   async notify({ recipient, sourceKey, message, destination }: { recipient: string; sourceKey: string; message: string; destination: string }) {
-    if (!sourceKey.trim() || !message.trim() || !(destination.startsWith("/groups/") || destination.startsWith("/gatherings/"))) {
+    if (!sourceKey.trim() || !message.trim() || !isNoticeDestination(destination)) {
       throw new InvalidNotice("A notice needs a source, message, and application destination.");
     }
     await this.notices.createIndex({ recipient: 1, sourceKey: 1 }, { unique: true });
@@ -43,6 +50,11 @@ export class NotifyingConcept {
   async markRead({ user, notice }: { user: string; notice: string }) {
     const changed = await this.notices.updateOne({ _id: notice, recipient: user, readAt: { $exists: false } }, { $set: { readAt: this.clock() } });
     if (!changed.modifiedCount && !(await this.notices.findOne({ _id: notice, recipient: user }))) throw new NoticeForbidden("This notice is not yours.");
+    return {};
+  }
+
+  async markAllRead({ user }: { user: string }) {
+    await this.notices.updateMany({ recipient: user, readAt: { $exists: false } }, { $set: { readAt: this.clock() } });
     return {};
   }
 
