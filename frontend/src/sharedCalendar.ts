@@ -7,6 +7,11 @@ export type SharedSegment = {
   count: number; muted: boolean; proposal: CountInterval | null;
 };
 
+export function selectedOverlapCalendar(overlaps: { start: string; end: string }[], total: number): CalendarData {
+  const intervals = overlaps.map((interval) => ({ ...interval, availableCount: total }));
+  return { timeline: intervals, windows: intervals, total };
+}
+
 export function sharedDetails(data: CalendarData, segment: SharedSegment) {
   const midpoint = (segment.start + segment.end) / 2;
   const interval = data.timeline.find((item) => Date.parse(item.start) <= midpoint && Date.parse(item.end) > midpoint);

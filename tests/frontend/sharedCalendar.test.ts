@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { availabilityCalendar } from "../../src/overlap.ts";
-import { sharedDaySegments, sharedDetails } from "../../frontend/src/sharedCalendar.ts";
+import { selectedOverlapCalendar, sharedDaySegments, sharedDetails } from "../../frontend/src/sharedCalendar.ts";
 
 describe("shared calendar filters", () => {
   const day = new Date(2035, 0, 1);
@@ -15,6 +15,18 @@ describe("shared calendar filters", () => {
     commitments: [], from: at(0), to: at(23), now: at(0),
   };
   const options = { from: -Infinity, to: Infinity, everyone: false };
+
+  test("selected-member searches show only common times and respect the scope and duration", () => {
+    const data = selectedOverlapCalendar([{ start: at(9), end: at(11) }], 3);
+    const segments = sharedDaySegments(data, day, { ...options, duration: 60, everyone: true });
+    expect(segments.find((item) => item.start === Date.parse(at(0)))?.muted).toBe(true);
+    expect(segments.find((item) => item.start === Date.parse(at(9)))).toMatchObject({
+      count: 3, muted: false, proposal: { start: at(9), end: at(11), availableCount: 3 },
+    });
+    expect(segments.find((item) => item.start === Date.parse(at(11)))?.muted).toBe(true);
+    const scoped = sharedDaySegments(data, day, { from: Date.parse(at(9, 30)), to: Date.parse(at(10, 30)), duration: 90, everyone: true });
+    expect(scoped.every((item) => item.muted)).toBe(true);
+  });
 
   test("duration requires the same people rather than just the same count", () => {
     const data = availabilityCalendar({ ...base, durationMinutes: 90 });
