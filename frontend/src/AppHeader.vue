@@ -80,7 +80,10 @@ function signOut() {
 <template>
   <header class="app-header">
     <div ref="bar" class="bar">
-      <a ref="brand" class="brand" :href="signedIn ? sectionHref(HOME_SECTION) : '/'" @click="signedIn && go($event, HOME_SECTION)">OpenTime</a>
+      <a ref="brand" class="brand" :href="signedIn ? sectionHref(HOME_SECTION) : '/'" @click="signedIn && go($event, HOME_SECTION)">
+        <img class="brand-icon" src="/hourglass.svg" alt="" width="32" height="32" />
+        <span>OpenTime</span>
+      </a>
 
       <template v-if="signedIn">
         <nav v-show="!collapsed" class="inline-nav" aria-label="Main">
@@ -145,7 +148,8 @@ function signOut() {
   height: 4rem; max-width: 64rem; margin: 0 auto; padding: 0 1.5rem;
   overflow: clip; overflow-clip-margin: .4rem; /* keeps the hidden measuring copy from widening the page */
 }
-.brand { flex: none; color: #0d6055; font-size: 1.25rem; font-weight: 800; text-decoration: none; }
+.brand { display: inline-flex; flex: none; align-items: center; gap: .6rem; color: #0d6055; font-size: 1.25rem; font-weight: 800; text-decoration: none; }
+.brand-icon { display: block; width: 2rem; height: 2rem; flex: none; }
 .brand:focus-visible, a:focus-visible, button:focus-visible { outline: 3px solid #e3b45a; outline-offset: 2px; }
 
 .inline-nav { display: flex; align-items: center; gap: .25rem; white-space: nowrap; }
