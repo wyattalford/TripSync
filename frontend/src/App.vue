@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "./api.ts";
 import WeeklyCalendar from "./WeeklyCalendar.vue";
+import SharedCalendar from "./SharedCalendar.vue";
 import AuthPanel from "./AuthPanel.vue";
 import NoticesPanel from "./NoticesPanel.vue";
 import AppHeader from "./AppHeader.vue";
@@ -219,6 +220,18 @@ async function proposeFromOverlap(interval: Interval | PartialSuggestion) {
       ? "You and the selected members had shared availability at this time."
       : "All group members had shared availability at this time.";
   proposalInvitees.value = searchScope.value === "selected" ? [...searchInvitees.value] : [];
+  navigate("gatherings");
+  await nextTick();
+  document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
+}
+
+async function proposeFromCalendar(group: string, interval: { start: string; end: string; availableCount: number }) {
+  proposalGroup.value = group;
+  proposalPurpose.value = "";
+  proposalStart.value = localInput(interval.start);
+  proposalEnd.value = localInput(interval.end);
+  proposalOverlap.value = `${interval.availableCount} group members had shared availability at this time.`;
+  proposalInvitees.value = [];
   navigate("gatherings");
   await nextTick();
   document.getElementById("proposal-form")?.scrollIntoView({ behavior: "smooth" });
@@ -862,8 +875,9 @@ onUnmounted(() => {
             </form>
           </section>
         </div>
+        <SharedCalendar v-show="activeSection === 'shared-time'" :active="activeSection === 'shared-time'" :groups="groups" :busy="busy" @propose="proposeFromCalendar" />
         <section v-show="activeSection === 'shared-time'" class="status-panel overlap-panel" id="section-shared-time">
-          <h3>Find shared time</h3>
+          <h3>Find time for selected people</h3>
           <p>Find a time for the whole group or choose who needs to be there.</p>
           <form @submit.prevent="findOverlap">
             <div class="search-fields">

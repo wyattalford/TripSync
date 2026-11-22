@@ -20,7 +20,7 @@ function minuteBoundary(day: Date, minute: number): Date {
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minute);
 }
 
-function ambiguousLocalTime(date: Date): boolean {
+export function ambiguousLocalTime(date: Date): boolean {
   for (const delta of [-86_400_000, 86_400_000]) {
     const offsetDifference = (date.getTimezoneOffset() - new Date(date.getTime() + delta).getTimezoneOffset()) * 60_000;
     if (!offsetDifference) continue;
@@ -35,7 +35,7 @@ function ambiguousLocalTime(date: Date): boolean {
 
 export type OpeningBlock = { opening: CalendarOpening; startMinute: number; endMinute: number; lane: number; lanes: number };
 
-function wallMinute(date: Date): number {
+export function wallMinute(date: Date): number {
   return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60 + date.getMilliseconds() / 60_000;
 }
 

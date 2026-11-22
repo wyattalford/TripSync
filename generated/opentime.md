@@ -63,6 +63,7 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 - `_sharedSnapshot(audience: Audience, from: DateTime, to: DateTime, now: DateTime) : one (intervals: SharedIntervals)`
 - `_overlapSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals, suggestions: PartialSuggestions)`
 - `_selectedOverlapSnapshot(user: User, group: Audience, invitees: SelectedUsers, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, overlaps: OverlapIntervals)`
+- `_calendarSnapshot(user: User, group: Audience, from: DateTime, to: DateTime, duration: Number, now: DateTime) : one (allowed: Flag, timeline: AvailabilityTimeline, windows: AvailabilityWindows, total: Number)`
 - `_ownedSnapshot(user: User) : one (openings: OwnedOpenings)`
 
 #### Instances
@@ -183,7 +184,7 @@ Defined in [Notifying](../design/concepts/Notifying.md), line 1.
 
 ## Computations
 
-- `fullGroupOverlaps(members: Grouping.Members, openings: AvailabilitySharing.SharedIntervals, commitments: AvailabilitySharing.SharedIntervals, from: DateTime, to: DateTime, now: DateTime, durationMinutes: Number) : AvailabilitySharing.OverlapIntervals` — [Openings composition](../design/compositions/Openings.md), line 18.
+- `fullGroupOverlaps(members: Grouping.Members, openings: AvailabilitySharing.SharedIntervals, commitments: AvailabilitySharing.SharedIntervals, from: DateTime, to: DateTime, now: DateTime, durationMinutes: Number) : AvailabilitySharing.OverlapIntervals` — [Openings composition](../design/compositions/Openings.md), line 19.
 
 ## Reactions
 
@@ -1322,6 +1323,50 @@ then
   RequestBoundary.respond (markedRead: true, requestId)
 ```
 
+### OpenTime.Openings.Calendar
+
+Authored path: `OpenTime.Openings.Calendar`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 15.
+
+```reaction
+when RequestBoundary.request (duration, from, group, path: "/openings/calendar", requestId, session, to)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Openings.Calendar:member#2
+
+Authored path: `OpenTime.Openings.Calendar`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 15.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Calendar
+where
+  instant is the current flow's instant
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/calendar", requestId, session, to)
+  AvailabilitySharing._calendarSnapshot (duration, from, group, now: instant, to, user) has (allowed: true, timeline, total, windows)
+then
+  RequestBoundary.respond (requestId, timeline, total, windows)
+```
+
+### OpenTime.Openings.Calendar:not-member#2
+
+Authored path: `OpenTime.Openings.Calendar`.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 5.
+- Covered by [Openings composition](../design/compositions/Openings.md), line 15.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Openings.Calendar
+where
+  instant is the current flow's instant
+  earlier, RequestBoundary.request (duration, from, group, path: "/openings/calendar", requestId, session, to)
+  AvailabilitySharing._calendarSnapshot (duration, from, group, now: instant, to, user) has (allowed: false)
+then
+  RequestBoundary.respond (error: "GROUP_FORBIDDEN", requestId)
+```
+
 ### OpenTime.Openings.Create
 
 Authored path: `OpenTime.Openings.Create`.
@@ -1664,6 +1709,7 @@ not listed here have no explicit input contract.
 - `/notices/list` — requires `session`
 - `/notices/mark-all-read` — requires `session`
 - `/notices/mark-read` — requires `session`, `notice`
+- `/openings/calendar` — requires `session`, `group`, `from`, `to`, `duration`
 - `/openings/create` — requires `session`, `start`, `end`
 - `/openings/mine` — requires `session`
 - `/openings/overlap` — requires `session`, `group`, `from`, `to`, `duration`

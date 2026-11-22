@@ -1,5 +1,5 @@
 import { MongoServerError, type ClientSession, type Collection, type Db } from "mongodb";
-import { readOverlapSnapshot } from "../overlapSnapshot.ts";
+import { readCalendarSnapshot, readOverlapSnapshot } from "../overlapSnapshot.ts";
 
 export class InvalidOpening extends Error {}
 export class OpeningConflict extends Error {}
@@ -171,5 +171,11 @@ export class AvailabilitySharingConcept {
   }) {
     const { allowed, overlaps } = await readOverlapSnapshot(this.db, input);
     return { allowed, overlaps };
+  }
+
+  async _calendarSnapshot({ user, group, from, to, duration, now }: {
+    user: string; group: string; from: string; to: string; duration: number; now: Date;
+  }) {
+    return readCalendarSnapshot(this.db, { user, group, from, to, duration, now });
   }
 }

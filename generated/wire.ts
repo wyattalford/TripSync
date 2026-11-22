@@ -325,6 +325,21 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "NOTICE_FORBIDDEN" | "UNKNOWN_SESSION" };
   };
+  "/openings/calendar": {
+    input: {
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["duration"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["from"]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["group"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["to"]>>;
+    };
+    output: {
+      "timeline": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["timeline"]>>;
+      "total": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["total"]>>;
+      "windows": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["windows"]>>;
+    };
+    error: { error: AppWideError | "GROUP_FORBIDDEN" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/openings/create": {
     input: {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["create"]>[0], ["end"]>>;
@@ -685,6 +700,20 @@ export type OpenTimeWireHttp = {
     };
     output: {
       "markedRead": true;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/openings/calendar": {
+    input: {
+      "duration": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["duration"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["from"]>>;
+      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["group"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>[0], ["to"]>>;
+    };
+    output: {
+      "timeline": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["timeline"]>>;
+      "total": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["total"]>>;
+      "windows": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["AvailabilitySharing"]["_calendarSnapshot"]>>>, ["windows"]>>;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
