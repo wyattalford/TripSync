@@ -39,6 +39,8 @@ The preview serves built Vue files and `/api` from port 3000, with a fallback fo
 
 ### Alpha validation and release
 
+[Watch the narrated Alpha user journey](https://drive.google.com/file/d/1GNy_hlNqsa6d0yTXKlV8FH6leV3036St/view?usp=sharing)
+
 On November 22, the merged `main` branch passed 147 tests against a disposable standalone MongoDB, Sync Engine and design checks, backend and Vue type checks, and the production build. A local four-person browser walkthrough covered group invitations, purpose-free openings, selected-member search, proposal, confirmation, versioned editing, fresh responses, reconfirmation, late acceptance, and the organizer's notification.
 
 ### Deploy on 6.1040 Apps
