@@ -108,3 +108,16 @@ The `opentime` app is deployed and its public `/health` returned HTTP 200 with `
 ## 9. November 22 Alpha database decision
 
 The course MongoDB does not support transactions. Alpha now uses conditional single-document writes and serializes Gathering changes within one app process. Grouping and Gathering keep pending notice events in their own documents for retry; overlap and calendar reads are sequential and may become stale during a concurrent change. This preserves the ordinary core journey on standalone MongoDB, but multiple app instances cannot guarantee exclusion of simultaneous conflicting commitments. Revisit that guarantee with the TA for Beta. This update supersedes the transaction and snapshot requirements described in the November 19 progress record above.
+
+## 10. Beta progress: accounts, notifications, and reminders (Desire)
+
+Since F4, accounts and notifications were hardened and reminders were added:
+
+- **Authenticating:** usernames are case-insensitive, passwords need at least 8 characters, and the sign-in screen has inline errors and password visibility. A session that expires mid-use returns the person to sign-in with an explanation.
+- **Notifying:** "mark all as read", stricter destinations, and a redesigned inbox showing which group or gathering each notice concerns. The header shows the unread count.
+- **Reminding (new concept):** each person chooses a reminder time from 1 minute to 24 hours (1 hour by default) under Settings. Every confirmed gathering they attend produces one reminder per version, in the app and by email. Edits produce a fresh reminder; cancelled, withdrawn, proposed, and already-started gatherings produce none.
+- **Contacting (new concept):** email is used only after the person enters a six-digit code sent to the address. They can turn email reminders off or remove the address. Email goes through a free provider (Resend or Brevo); without one configured, emails are printed to the server log.
+
+Tests cover both new concepts, the reminder worker with a controlled clock, the email sender with a fake provider, the settings endpoints over HTTP, and the settings form logic. A local browser walkthrough added and verified an email and received an in-app and email reminder for a gathering confirmed 20 minutes ahead.
+
+**Remaining before F7:** configure a free email provider in deployment settings and check whether emails reach the inbox or spam; Resend without a verified domain only delivers to the account owner, so testers need Brevo or a verified domain. Longer sessions for user testing (the 30-minute fixed session interrupts testers), notices for group joins, removals, and closures, clearer notice wording with names, and optional phone push notifications remain open. User testing for F6 needs participants scheduled now.

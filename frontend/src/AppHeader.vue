@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { badgeLabel } from "./notices.ts";
-import { HOME_SECTION, NAV_ITEMS, linksFit, sectionHref, type Section } from "./nav.ts";
+import { HOME_SECTION, NAV_ITEMS, SETTINGS_SECTION, linksFit, sectionHref, type Section } from "./nav.ts";
+
+// Gear outline (Feather "settings" icon path), drawn with the circle in the template.
+const GEAR = "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z";
 
 // Site header and main navigation. Links sit on the right while they fit beside the wordmark;
 // otherwise a hamburger opens a full-height menu below the header. The parent owns routing:
@@ -96,6 +99,12 @@ function signOut() {
               <span class="visually-hidden">, </span>{{ badgeLabel(unread) }}<span class="visually-hidden"> unread</span>
             </span>
           </a>
+          <a
+            class="settings-link" :href="sectionHref(SETTINGS_SECTION)" aria-label="Settings" title="Settings"
+            :aria-current="active === SETTINGS_SECTION ? 'page' : undefined" @click="go($event, SETTINGS_SECTION)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path :d="GEAR" /></svg>
+          </a>
           <button type="button" class="sign-out" :disabled="busy" @click="signOut">Sign out</button>
         </nav>
 
@@ -113,6 +122,7 @@ function signOut() {
           <span v-for="item in NAV_ITEMS" :key="item.section" class="measure-link">
             {{ item.label }}<span v-if="item.section === 'notices' && unread" class="badge">{{ badgeLabel(unread) }}</span>
           </span>
+          <span class="settings-link measure-link" />
           <span class="sign-out measure-link">Sign out</span>
         </div>
       </template>
@@ -133,6 +143,13 @@ function signOut() {
       </nav>
       <div class="menu-account">
         <p v-if="username">Signed in as <strong>{{ username }}</strong></p>
+        <a
+          class="menu-settings" :href="sectionHref(SETTINGS_SECTION)"
+          :aria-current="active === SETTINGS_SECTION ? 'page' : undefined" @click="go($event, SETTINGS_SECTION)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path :d="GEAR" /></svg>
+          Settings
+        </a>
         <button type="button" class="sign-out" :disabled="busy" @click="signOut">Sign out</button>
       </div>
     </div>
@@ -199,6 +216,22 @@ button { margin: 0; font: inherit; }
 .menu-account { margin-top: auto; padding: 1.25rem 1.5rem 2rem; border-top: 1px solid #d6dfdb; }
 .menu-account p { margin: 0 0 .75rem; color: #526970; overflow-wrap: anywhere; }
 .menu-account .sign-out { width: 100%; min-height: 3rem; margin: 0; }
+
+/* Settings: gear icon beside Sign out on desktop; a row above Sign out in the phone menu. */
+.settings-link {
+  display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; margin-left: .35rem;
+  border-radius: .4rem; color: #3d555b;
+}
+.settings-link:hover { background: #f3f7f4; color: #172f35; }
+.settings-link[aria-current="page"] { background: #e0eee9; color: #0d6055; }
+.settings-link svg, .menu-settings svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.measure .settings-link { width: 2.5rem; padding: 0; margin-left: .35rem; }
+.menu-settings {
+  display: flex; align-items: center; gap: .6rem; min-height: 3rem; margin: 0 0 .75rem; padding: 0 .9rem;
+  border: 1px solid #cbd9d4; border-radius: .4rem; color: #172f35; font-weight: 700; text-decoration: none;
+}
+.menu-settings:hover { background: #f3f7f4; }
+.menu-settings[aria-current="page"] { border-color: #0d6055; background: #eef7f2; color: #0d6055; }
 
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

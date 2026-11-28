@@ -4,6 +4,8 @@ import { assembleApplication } from "./assembly.ts";
 import { db } from "./db.ts";
 import { policy } from "./http.ts";
 import { deliverPendingNotices } from "./noticeOutbox.ts";
+import { createMailer, type Mailer } from "./mailer.ts";
+import { deliverPendingEmails, sendDueReminders } from "./reminders.ts";
 
 const application = assembleApplication();
 const gateway = createGateway({ application });
@@ -20,6 +22,33 @@ async function deliverNotices() {
 }
 void deliverNotices();
 setInterval(() => { void deliverNotices(); }, 2_000).unref();
+
+// Reminders (every 15 s) and outgoing email (every 3 s). See src/reminders.ts and src/mailer.ts.
+let mailer: Mailer;
+try { mailer = createMailer(); }
+catch (error) {
+  console.error("Email is not configured; printing emails instead.", error instanceof Error ? error.message : error);
+  mailer = createMailer({ EMAIL_PROVIDER: "console" });
+}
+let reminding = false;
+async function runReminders() {
+  if (reminding) return;
+  reminding = true;
+  try { await sendDueReminders(db); }
+  catch (error) { console.error("Reminders will retry", error); }
+  finally { reminding = false; }
+}
+let emailing = false;
+async function runEmail() {
+  if (emailing) return;
+  emailing = true;
+  try { await deliverPendingEmails(db, mailer); }
+  catch (error) { console.error("Email delivery will retry", error); }
+  finally { emailing = false; }
+}
+void runReminders();
+setInterval(() => { void runReminders(); }, 15_000).unref();
+setInterval(() => { void runEmail(); }, 3_000).unref();
 
 async function health(): Promise<Response> {
   try {

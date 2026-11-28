@@ -6,6 +6,7 @@ import SharedCalendar from "./SharedCalendar.vue";
 import AuthPanel from "./AuthPanel.vue";
 import NoticesPanel from "./NoticesPanel.vue";
 import AppHeader from "./AppHeader.vue";
+import SettingsPanel from "./SettingsPanel.vue";
 import { unreadCount, type NoticeSummary } from "./notices.ts";
 import { sectionFromLocation as sectionForUrl, sectionHref, type Section } from "./nav.ts";
 import { onSessionEnded } from "./session.ts";
@@ -647,6 +648,10 @@ async function signOut() {
     clearAccount();
     sessionNotice.value = "";
     message.value = "";
+    // Back to a clean sign-in page: drop the previous page's path and #section from the URL.
+    history.replaceState({}, "", "/");
+    syncSection();
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   } catch {
     showMessage("OpenTime could not reach the server. Try again.", "error");
   } finally {
@@ -683,16 +688,11 @@ onUnmounted(() => {
       @navigate="navigate" @sign-out="signOut"
     />
     <main class="content">
-      <template v-if="currentUsername">
-        <p class="eyebrow">Make time together</p>
-        <h1>Find an opening. Make a plan.</h1>
-        <p class="intro">Share when you are free with chosen groups, find a time that works, and decide together whether to meet.</p>
-      </template>
-
       <p v-if="message && !(currentUsername && activeSection === 'openings')" class="notice" :class="messageKind" role="status">{{ message }}</p>
       <p v-if="loading">Checking your account…</p>
       <section v-else-if="currentUsername" class="signed-in">
-        <div class="account-heading"><h2>Welcome, {{ currentUsername }}</h2></div>
+        <div v-if="activeSection !== 'settings'" class="account-heading"><h2>Welcome, {{ currentUsername }}</h2></div>
+        <SettingsPanel v-if="activeSection === 'settings'" id="section-settings" :username="currentUsername" />
         <NoticesPanel
           v-show="activeSection === 'notices'" id="section-notices" :notices="notices" :groups="groups" :gatherings="gatherings"
           :busy="busy" @open="openNotice" @mark-all-read="markAllNoticesRead"

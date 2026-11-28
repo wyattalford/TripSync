@@ -6,6 +6,9 @@ import { GroupingConcept } from "./concepts/Grouping.ts";
 import { AvailabilitySharingConcept } from "./concepts/AvailabilitySharing.ts";
 import { GatheringConcept } from "./concepts/Gathering.ts";
 import { NotifyingConcept } from "./concepts/Notifying.ts";
+import { ContactingConcept } from "./concepts/Contacting.ts";
+import { RemindingConcept } from "./concepts/Reminding.ts";
+import { composition as settings } from "./compositions/Settings.ts";
 import { composition as accounts } from "./compositions/Accounts.ts";
 import { composition as groups } from "./compositions/Groups.ts";
 import { composition as openings } from "./compositions/Openings.ts";
@@ -16,8 +19,8 @@ import { db } from "./db.ts";
 export function assembleApplication(database: Db = db) {
   return assemble({
     conceptSet: applicationConceptSet,
-    instances: { Authenticating: new AuthenticatingConcept(database), Grouping: new GroupingConcept(database), AvailabilitySharing: new AvailabilitySharingConcept(database), Gathering: new GatheringConcept(database), Notifying: new NotifyingConcept(database) },
-    composition: { OpenTime: { Accounts: accounts, Groups: groups, Openings: openings, Gatherings: gatherings, Notices: notices } },
+    instances: { Authenticating: new AuthenticatingConcept(database), Grouping: new GroupingConcept(database), AvailabilitySharing: new AvailabilitySharingConcept(database), Gathering: new GatheringConcept(database), Notifying: new NotifyingConcept(database), Contacting: new ContactingConcept(database), Reminding: new RemindingConcept(database) },
+    composition: { OpenTime: { Accounts: accounts, Groups: groups, Openings: openings, Gatherings: gatherings, Notices: notices, Settings: settings } },
     rawFaultReporter: ({ error }) => console.error(error),
   });
 }

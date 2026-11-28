@@ -37,6 +37,32 @@ bun run preview
 
 The preview serves built Vue files and `/api` from port 3000, with a fallback for Vue deep links. Tests use and reset only guarded `opentime_*_test` databases. `bun run db:down` stops the local MongoDB container without deleting its data.
 
+### Tests
+
+Start MongoDB first (`bun run db:up`, or `bun run dev` already does it), then run from the repository root:
+
+| Command | What it runs |
+| --- | --- |
+| `bun run test` | Everything |
+| `bun test tests/concepts` | Concept tests: each concept's actions and queries in isolation (Authenticating, Grouping, AvailabilitySharing, Gathering, Notifying, Contacting, Reminding) |
+| `bun test tests/compositions` | System tests through the real HTTP handler, cookies, and MongoDB (sign-in and sessions, groups, openings, gatherings, notices, settings) |
+| `bun test tests/frontend` | Frontend logic without a browser (forms, navigation, calendar, inbox, settings) |
+| `bun test tests/reminders.test.ts tests/mailer.test.ts` | The reminder worker and email sending (no real emails are sent) |
+| `bun test tests/concepts/Notifying.test.ts` | A single file |
+
+### Email reminders
+
+Reminders always appear in Notifications. To also send them by email, set these in `.env` locally and in the 6.1040 Apps settings for deployment. Never commit API keys.
+
+| Setting | Value |
+| --- | --- |
+| `EMAIL_PROVIDER` | `console` (default: prints emails to the terminal), `resend`, or `brevo` |
+| `EMAIL_API_KEY` | The provider's API key |
+| `EMAIL_FROM` | Sender address. Resend without a verified domain must use `onboarding@resend.dev`, and then only delivers to the Resend account owner's own address; Brevo accepts any sender address verified in Brevo. |
+| `EMAIL_FROM_NAME` | `OpenTime` |
+
+People add and verify their address under **Settings** (gear icon). Delivery failures are retried with backoff and logged as "Email delivery will retry".
+
 ### Alpha validation and release
 
 [Watch the narrated Alpha user journey](https://drive.google.com/file/d/1GNy_hlNqsa6d0yTXKlV8FH6leV3036St/view?usp=sharing)

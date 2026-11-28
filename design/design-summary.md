@@ -9,9 +9,11 @@ Friends can miss opportunities to spend time together even when they are willing
 - `Authenticating` identifies the account responsible for each request. `Grouping` maintains consensual group membership through individual invitations or shared join links. Reactions use identity and membership to control access.
 - `AvailabilitySharing` lets users record free time without a purpose and publish it to all current groups or selected groups. One opening can serve several groups. Reactions calculate common intervals from current members' shared openings, excluding their confirmed commitments. Other members receive these overlaps rather than individual openings. A gathering gets its purpose when someone proposes it.
 - `Gathering` turns a proposal into a confirmed arrangement. An organizer chooses invitees from the group, proposes an activity, time, and place, and confirms those who explicitly accept. Additional invitees can join a confirmed gathering by accepting its current details. Editing creates a new version requiring fresh acceptance and confirmation.
-- `Notifying` provides an in-app inbox for invitations, responses, edits, confirmation, withdrawal, and cancellation. Reactions specify the recipients of each notice. Reading a notice does not establish acceptance or attendance.
+- `Notifying` provides an in-app inbox for invitations, responses, edits, confirmation, withdrawal, cancellation, and reminders. Reactions specify the recipients of each notice. Reading a notice does not establish acceptance or attendance.
+- `Reminding` lets each person choose how long before a confirmed gathering they want a reminder, from 1 minute to 24 hours (1 hour by default), and records each reminder so it is sent once per gathering version. Editing a gathering's time produces a new reminder.
+- `Contacting` reaches a person by email only after they prove they control the address with a six-digit code. They can turn email reminders off or remove the address at any time. Email uses a free provider; in-app reminders work without email.
 
-With the five above concepts, OpenTime aims to reduce the likelihood of encountering the aforementioned bad situations by ensuring one's available times are communicated with others clearly and that tentative plans become gatherings. We will test this theory during user testing.
+With the seven above concepts, OpenTime aims to reduce the likelihood of encountering the aforementioned bad situations by ensuring one's available times are communicated with others clearly and that tentative plans become gatherings. We will test this theory during user testing.
 
 ## Addressed Ethical Analysis Concerns
 
@@ -29,6 +31,8 @@ Our design responds to the following concerns from the [ethical analysis](proble
 
 - **Overlaps for selected members:** Members can search for a time with specific current group members. The requester is always included and must pick at least one other person. Results contain common intervals only. In a two-person search someone can infer the other person’s availability within their own shared time. The opening editor explains this before sharing. We still need to observe whether people understand that disclosure and find the search useful.
 
-- **Notification volume:** Larger groups may generate too many notices. Testing should establish which changes people need to see and whether notification preferences or batching would help. The MVP uses the notices specified in the concept design.
+- **Notification volume:** Larger groups may generate too many notices. Testing should establish which changes people need to see and whether notification preferences or batching would help. Beta lets people choose their reminder time and turn email reminders off; other notices stay in the app.
+
+- **Email delivery:** Reminders are emailed through a free provider without a domain of our own, so some may land in spam, and some free senders only deliver to the account owner until a domain is verified. In-app reminders do not depend on email. We will ask testers whether the emails arrived and where.
 
 - **Adoption and maintaining openings:** The benefit depends on friends keeping their openings current. We need to test whether the opportunities discovered justify that effort and whether nonusers become excluded. Willingness levels, activity suggestions, and guest participation remain possible extensions rather than prerequisites for the core workflow.
