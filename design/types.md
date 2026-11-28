@@ -4,6 +4,8 @@ OpenTime identifies people through Authenticating. Grouping binds its external U
 AvailabilitySharing binds User to Authenticating.User and Audience to Grouping.Group.
 Gathering binds User to Authenticating.User and Context to Grouping.Group.
 Notifying binds User to Authenticating.User.
+Contacting binds User to Authenticating.User.
+Reminding binds User to Authenticating.User, and Gathering and Version to Gathering's.
 
 ```types
 ```
@@ -23,5 +25,13 @@ instantiate Gathering with
 
 instantiate Notifying with
   User is Authenticating.User
+
+instantiate Contacting with
+  User is Authenticating.User
+
+instantiate Reminding with
+  User is Authenticating.User
+  Gathering is Gathering.Gathering
+  Version is Gathering.Version
 
 ```

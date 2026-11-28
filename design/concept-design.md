@@ -552,9 +552,145 @@ queries
       order; no rows if absent.
 ```
 
-**Notes.** Notifications are an in-app inbox in the MVP. Email, push delivery, and scheduled reminders are outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying exactly one group or gathering (`/groups/<id>` or `/gatherings/<id>`); any other path is refused. Possessing that path does not grant access. `markAllRead` lets a recipient clear their unread notices at once; it never touches another user's notices. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
+**Notes.** Notifications are an in-app inbox. Scheduled reminders come from Reminding and also appear here; email delivery belongs to Contacting, and push delivery is outside scope for now. A sourceKey identifies one triggering action occurrence and notice type, so a retried delivery reuses the key while a later action gets a new one. Destination is an application path identifying exactly one group or gathering (`/groups/<id>` or `/gatherings/<id>`); any other path is refused. Possessing that path does not grant access. `markAllRead` lets a recipient clear their unread notices at once; it never touches another user's notices. Notices describe past changes, and the destination always shows the current authorized state. Reading a notice does not accept an invitation or change attendance.
 
 **Implementation note.** Grouping and Gathering store pending notice events in their own documents with the triggering change. A background dispatcher passes them to Notifying and removes each event after delivery; failed delivery retries. Notifying deduplicates by recipient and sourceKey. The successful domain change remains valid if delivery fails.
+
+## Reminding
+
+```text
+concept Reminding
+
+purpose help attendees remember confirmed plans shortly before they start
+
+principle each user chooses how long before a gathering they want to be
+  reminded, from 1 minute to 24 hours (1 hour by default). Each confirmed
+  version of a gathering they attend produces one reminder at that time.
+  Editing a gathering creates a new version with its own reminder, and a
+  changed lead time applies to reminders not yet sent.
+
+types
+  external User
+  external Gathering
+  external Version
+
+state
+  a set of Preferences with
+    a user User
+    a leadMinutes Number
+    a timeZone String
+
+  a set of Reminders with
+    a user User
+    a gathering Gathering
+    a version Version
+    a sentAt DateTime
+    unique user and version
+
+actions
+  setPreferences (user: User, leadMinutes: Number, timeZone: String) : return ()
+    where leadMinutes is a whole number from 1 to 1440
+      and timeZone is a known time zone
+    then
+      save leadMinutes and timeZone for user
+      return
+
+  record (user: User, gathering: Gathering, version: Version)
+    : return (first: Flag)
+    then
+      if a reminder for user and version exists, return first = false
+      otherwise add one with sentAt now and return first = true
+
+queries
+  _preferences (user: User) : one (leadMinutes: Number, timeZone: String)
+    Returns the user's choice, or 60 minutes in America/New_York.
+
+  _preferencesFor (users: set of User) : one (preferences: set of Preference)
+    Returns each supplied user's choice, with defaults when unset.
+
+  _recorded (user: User, version: Version) : one (recorded: Flag)
+    Answers whether the reminder was already sent.
+```
+
+**Notes.** Reminding never reads Gathering's state. A reaction supplies the confirmed gatherings and attendees (below). Recording per version means editing a confirmed gathering's time, then reconfirming, produces a fresh reminder, while cancelled, withdrawn, or merely proposed gatherings produce none. The time zone is the browser's, saved with the lead time, so emailed times read in local time.
+
+## Contacting
+
+```text
+concept Contacting
+
+purpose reach a person outside the app at an address they have proven
+  they control
+
+principle a user enters an email address and receives a short code there.
+  Entering the code proves the address is theirs, and only then can
+  messages be emailed to them. They can turn email reminders off or
+  remove the address at any time. Repeating a message with the same
+  source key queues it once.
+
+types
+  external User
+
+state
+  a set of Contacts with
+    a user User
+    an optional email String
+    an optional pendingEmail String
+    an optional codeVerifier String
+    an optional codeExpiresAt DateTime
+    a codeAttempts Number
+    an optional codeSentAt DateTime
+    an emailReminders Flag
+
+  a set of Emails with
+    a user User
+    a sourceKey String
+    a to String
+    a subject String
+    a text String
+    a createdAt DateTime
+    an optional sentAt DateTime
+    an attempts Number
+    a nextAttemptAt DateTime
+    unique user and sourceKey
+
+actions
+  requestVerification (user: User, email: String) : return ()
+    where email is a valid address and no code was sent to user
+      in the last minute
+    then
+      set pendingEmail and a new six-digit code expiring in 15 minutes
+      queue an email containing the code to that address
+      return
+
+  verify (user: User, code: String) : return (email: String)
+    where user has an unexpired pending code with fewer than five
+      attempts, and code matches it
+    then
+      make pendingEmail the verified email and clear the code
+      return email
+
+  removeEmail (user: User) : return ()
+  setEmailReminders (user: User, enabled: Flag) : return ()
+
+  sendToUser (user: User, sourceKey: String, subject: String, text: String)
+    : return (queued: Flag)
+    then
+      if user has a verified email with email reminders on, queue the
+        email once per sourceKey and return queued = true
+      otherwise return queued = false
+
+  markSent (email: Email) : return ()
+  markFailed (email: Email) : return ()
+    then add an attempt and back off the next attempt
+
+queries
+  _contact (user: User) : one (email, pendingEmail, emailReminders)
+  _pendingEmails (now: DateTime) : one (emails: set of Email)
+    Internal to delivery; never a public endpoint.
+```
+
+**Notes.** Verifying before sending keeps OpenTime from emailing someone who never asked for it. Codes are stored only as a derived hash, expire after 15 minutes, and allow five attempts; a new code can be requested once a minute. A changed address stays pending, and reminders keep going to the old verified address until the new one is confirmed. Delivery uses a free provider (Resend or Brevo) chosen by environment settings; a worker sends queued emails and retries failures with backoff, giving up after five attempts. Without email, reminders still appear in the app.
 
 ## Essential Reactions
 
@@ -935,10 +1071,46 @@ then
 
 **Notes.** Marking a notice read follows the same authentication pattern and invokes `Notifying.markRead(user, notice)`. The concept's recipient check prevents acknowledging another person's notice. Following a destination uses the group or gathering access checks above rather than trusting the notification path.
 
+### Remind attendees before a confirmed gathering
+
+```text
+when
+  the reminder clock ticks at now
+where
+  Gathering._startingBetween(now, now + 24 hours) returns gathering,
+    version, activity, place, start, and attendees
+  Reminding._preferencesFor(attendees) returns each attendee's
+    leadMinutes and timeZone
+  for an attendee, now is at least start - leadMinutes
+  Reminding._recorded(attendee, version) returns recorded = false
+then
+  Notifying.notify(attendee, sourceKey = "reminder:" + version,
+    message = "Reminder: " + activity + " at " + place + " starts in ...",
+    destination = the application path for gathering)
+  Contacting.sendToUser(attendee, sourceKey = "reminder:" + version,
+    subject and text with the start in the attendee's time zone)
+  Reminding.record(attendee, gathering, version)
+```
+
+**Notes.** Every step is idempotent by source key or version, so a missed or repeated tick never duplicates a reminder. A gathering confirmed inside someone's lead time is reminded on the next tick with the real time remaining. Late joiners are attendees and are reminded; people who withdrew, proposals, cancelled gatherings, and gatherings that already started are not.
+
+### Manage reminder and email settings
+
+```text
+when
+  Requesting.saveReminders(session, leadMinutes, timeZone)
+  and Authenticating.authenticate(session) returns user
+    within that request's flow
+then
+  Reminding.setPreferences(user, leadMinutes, timeZone)
+```
+
+**Notes.** Requesting and confirming an email code, turning email reminders off, and removing the address follow the same pattern with `Contacting.requestVerification`, `verify`, `setEmailReminders`, and `removeEmail`. Responses never contain codes; the code reaches the person only by email.
+
 ## Roles of the Concepts
 
-Authenticating identifies the account responsible for each request. Grouping establishes which people belong to a planning audience. AvailabilitySharing records when invitations would be welcome, while Gathering records responses and definite commitments. This separation lets a person change their openings without rewriting a confirmed plan. Notifying draws attention to invitations and changes without deciding what anyone has accepted.
+Authenticating identifies the account responsible for each request. Grouping establishes which people belong to a planning audience. AvailabilitySharing records when invitations would be welcome, while Gathering records responses and definite commitments. This separation lets a person change their openings without rewriting a confirmed plan. Notifying draws attention to invitations and changes without deciding what anyone has accepted. Reminding decides when each attendee should be reminded of a confirmed plan, and Contacting delivers those reminders by email only to addresses people have verified.
 
 All external User types are bound to Authenticating's User. AvailabilitySharing's Audience and Gathering's Context are bound to Grouping's Group. These are identities, not objects whose fields another concept may read. Reactions retrieve the necessary facts through each concept's queries and pass values through its actions. Group overlaps combine authorized openings with confirmed commitments showing complete-group intervals first, then the best partial-group intervals with counts and unavailable members if no complete-group time exists. Confirmation, withdrawal, and cancellation change these calculated overlaps without deleting or copying opening records.
 
-The MVP includes all five concepts, dated openings, versioned gathering proposals, and in-app notifications. Its central distinction is between belonging to a group, welcoming an invitation, accepting specific details, and having a confirmed plan. Each requires its own explicit evidence, and none is inferred from silence or an empty calendar.
+Beta includes all seven concepts, dated openings, versioned gathering proposals, in-app notifications, and reminders in the app and by verified email. Its central distinction is between belonging to a group, welcoming an invitation, accepting specific details, and having a confirmed plan. Each requires its own explicit evidence, and none is inferred from silence or an empty calendar.

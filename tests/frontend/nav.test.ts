@@ -10,8 +10,11 @@ describe("main navigation", () => {
     expect(HOME_SECTION).toBe("groups");
   });
 
-  test("recognizes only real sections", () => {
+  test("recognizes only real sections, including the settings page outside the main links", () => {
     for (const item of NAV_ITEMS) expect(isSection(item.section)).toBe(true);
+    expect(isSection("settings")).toBe(true);
+    expect(NAV_ITEMS.some((item) => item.section === "settings")).toBe(false);
+    expect(sectionFromLocation("#settings", "/")).toBe("settings");
     for (const value of ["", "home", "Groups", "notices ", "#groups"]) expect(isSection(value)).toBe(false);
   });
 

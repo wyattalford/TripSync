@@ -311,6 +311,15 @@ export class GatheringConcept {
     return { gatherings };
   }
 
+  /** Confirmed gatherings whose current version starts in (from, to]; used by reminders. */
+  async _startingBetween({ from, to }: { from: Date; to: Date }) {
+    const found = await this.gatherings.find({ status: "CONFIRMED", currentStart: { $gt: from, $lte: to } }).toArray();
+    return { gatherings: found.map((document) => { const version = current(document); return {
+      gathering: document._id, version: version.version, activity: version.activity, place: version.place,
+      start: version.start.toISOString(), end: version.end.toISOString(), attendees: document.attendees,
+    }; }) };
+  }
+
   async _commitmentsFor({ users, from, to, now }: { users: string[]; from: string; to: string; now: Date }) {
     return { commitments: await readConfirmedCommitments(this.db, users, from, to, now) };
   }

@@ -1,6 +1,6 @@
 // Main navigation: section names, URL mapping, and the "do the links fit?" rule.
 
-export type Section = "groups" | "openings" | "shared-time" | "gatherings" | "notices";
+export type Section = "groups" | "openings" | "shared-time" | "gatherings" | "notices" | "settings";
 
 export const NAV_ITEMS: readonly { section: Section; label: string }[] = [
   { section: "groups", label: "Groups" },
@@ -12,8 +12,11 @@ export const NAV_ITEMS: readonly { section: Section; label: string }[] = [
 
 export const HOME_SECTION: Section = "groups";
 
+/** Account pages reached from the account area of the header rather than the main links. */
+export const SETTINGS_SECTION: Section = "settings";
+
 export function isSection(value: string): value is Section {
-  return NAV_ITEMS.some((item) => item.section === value);
+  return value === SETTINGS_SECTION || NAV_ITEMS.some((item) => item.section === value);
 }
 
 /**

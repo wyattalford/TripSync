@@ -33,7 +33,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 12.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 14.
 
 ### AvailabilitySharing
 
@@ -68,9 +68,37 @@ Defined in [AvailabilitySharing](../design/concepts/AvailabilitySharing.md), lin
 
 #### Instances
 
-- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 16.
-  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 18.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 17.
+- `AvailabilitySharing` — instance of `AvailabilitySharing` — [Application types](../design/types.md), line 18.
+  - `Audience` is `Grouping.Group` — [Application types](../design/types.md), line 20.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 19.
+
+### Contacting
+
+Defined in [Contacting](../design/concepts/Contacting.md), line 1.
+
+#### Actions
+
+- `requestVerification(user: User, email: String) : returns ()`
+  - Refuses `INVALID_EMAIL`: Enter a valid email address.
+  - Refuses `CODE_COOLDOWN`: Wait a minute before requesting another code.
+- `verify(user: User, code: String) : returns (email: String)`
+  - Refuses `CODE_EXPIRED`: That code has expired. Request a new one.
+  - Refuses `INVALID_CODE`: That code is incorrect.
+- `removeEmail(user: User) : returns ()`
+- `setEmailReminders(user: User, enabled: Flag) : returns ()`
+- `sendToUser(user: User, sourceKey: String, subject: String, text: String, html: String) : returns (queued: Flag)`
+- `markSent(email: Email) : returns ()`
+- `markFailed(email: Email) : returns ()`
+
+#### Queries
+
+- `_contact(user: User) : one (contact: ContactDetails)`
+- `_pendingEmails(now: DateTime) : one (emails: PendingEmails)`
+
+#### Instances
+
+- `Contacting` — instance of `Contacting` — [Application types](../design/types.md), line 29.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 30.
 
 ### Gathering
 
@@ -111,13 +139,14 @@ Defined in [Gathering](../design/concepts/Gathering.md), line 1.
 - `_contextFor(gathering: Gathering) : optional (context: Context)`
 - `_visibleTo(user: User, gathering: Gathering) : one (allowed: Flag)`
 - `_listFor(user: User) : one (gatherings: GatheringSummaries)`
+- `_startingBetween(from: DateTime, to: DateTime) : one (gatherings: UpcomingGatherings)`
 - `_commitmentsFor(users: Invitees, from: DateTime, to: DateTime, now: DateTime) : one (commitments: CommitmentIntervals)`
 
 #### Instances
 
-- `Gathering` — instance of `Gathering` — [Application types](../design/types.md), line 20.
-  - `Context` is `Grouping.Group` — [Application types](../design/types.md), line 22.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 21.
+- `Gathering` — instance of `Gathering` — [Application types](../design/types.md), line 22.
+  - `Context` is `Grouping.Group` — [Application types](../design/types.md), line 24.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 23.
 
 ### Grouping
 
@@ -158,8 +187,8 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 
 #### Instances
 
-- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 13.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 14.
+- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 15.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 16.
 
 ### Notifying
 
@@ -179,8 +208,31 @@ Defined in [Notifying](../design/concepts/Notifying.md), line 1.
 
 #### Instances
 
-- `Notifying` — instance of `Notifying` — [Application types](../design/types.md), line 24.
-  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 25.
+- `Notifying` — instance of `Notifying` — [Application types](../design/types.md), line 26.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 27.
+
+### Reminding
+
+Defined in [Reminding](../design/concepts/Reminding.md), line 1.
+
+#### Actions
+
+- `setPreferences(user: User, leadMinutes: Number, timeZone: String) : returns ()`
+  - Refuses `INVALID_REMINDER`: Choose a reminder time between 1 minute and 24 hours.
+- `record(user: User, gathering: Gathering, version: Version) : returns (first: Flag)`
+
+#### Queries
+
+- `_preferences(user: User) : one (leadMinutes: Number, timeZone: String)`
+- `_preferencesFor(users: UserSet) : one (preferences: ReminderPreferences)`
+- `_recorded(user: User, version: Version) : one (recorded: Flag)`
+
+#### Instances
+
+- `Reminding` — instance of `Reminding` — [Application types](../design/types.md), line 32.
+  - `Gathering` is `Gathering.Gathering` — [Application types](../design/types.md), line 34.
+  - `User` is `Authenticating.User` — [Application types](../design/types.md), line 33.
+  - `Version` is `Gathering.Version` — [Application types](../design/types.md), line 35.
 
 ## Computations
 
@@ -1674,6 +1726,232 @@ then
   RequestBoundary.respond (requestId, withdrawn: true)
 ```
 
+### OpenTime.Settings.Get
+
+Authored path: `OpenTime.Settings.Get`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 10.
+
+```reaction
+when RequestBoundary.request (path: "/settings/get", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.Get#2
+
+Authored path: `OpenTime.Settings.Get`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 10.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.Get
+where
+  Reminding._preferences (user) has (leadMinutes, timeZone)
+  Contacting._contact (user) has (contact)
+  earlier, RequestBoundary.request (path: "/settings/get", requestId, session)
+then
+  RequestBoundary.respond (contact, leadMinutes, requestId, timeZone)
+```
+
+### OpenTime.Settings.RemoveEmail
+
+Authored path: `OpenTime.Settings.RemoveEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 14.
+
+```reaction
+when RequestBoundary.request (path: "/settings/email/remove", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.RemoveEmail#2
+
+Authored path: `OpenTime.Settings.RemoveEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 14.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.RemoveEmail
+then
+  Contacting.removeEmail (user)
+```
+
+### OpenTime.Settings.RemoveEmail#3
+
+Authored path: `OpenTime.Settings.RemoveEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 14.
+
+```reaction
+when Contacting.removeEmail (user), asked by OpenTime.Settings.RemoveEmail#2
+where
+  earlier, RequestBoundary.request (path: "/settings/email/remove", requestId, session)
+then
+  RequestBoundary.respond (removed: true, requestId)
+```
+
+### OpenTime.Settings.RequestEmailCode
+
+Authored path: `OpenTime.Settings.RequestEmailCode`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 12.
+
+```reaction
+when RequestBoundary.request (email, path: "/settings/email/request", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.RequestEmailCode#2
+
+Authored path: `OpenTime.Settings.RequestEmailCode`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 12.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.RequestEmailCode
+where
+  earlier, RequestBoundary.request (email, path: "/settings/email/request", requestId, session)
+then
+  Contacting.requestVerification (email, user)
+```
+
+### OpenTime.Settings.RequestEmailCode#3
+
+Authored path: `OpenTime.Settings.RequestEmailCode`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 12.
+
+```reaction
+when Contacting.requestVerification (email, user), asked by OpenTime.Settings.RequestEmailCode#2
+where
+  earlier, RequestBoundary.request (email, path: "/settings/email/request", requestId, session)
+then
+  RequestBoundary.respond (requestId, sent: true)
+```
+
+### OpenTime.Settings.SaveReminders
+
+Authored path: `OpenTime.Settings.SaveReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 11.
+
+```reaction
+when RequestBoundary.request (leadMinutes, path: "/settings/reminders", requestId, session, timeZone)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.SaveReminders#2
+
+Authored path: `OpenTime.Settings.SaveReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 11.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.SaveReminders
+where
+  earlier, RequestBoundary.request (leadMinutes, path: "/settings/reminders", requestId, session, timeZone)
+then
+  Reminding.setPreferences (leadMinutes, timeZone, user)
+```
+
+### OpenTime.Settings.SaveReminders#3
+
+Authored path: `OpenTime.Settings.SaveReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 11.
+
+```reaction
+when Reminding.setPreferences (leadMinutes, timeZone, user), asked by OpenTime.Settings.SaveReminders#2
+where
+  earlier, RequestBoundary.request (leadMinutes, path: "/settings/reminders", requestId, session, timeZone)
+then
+  RequestBoundary.respond (requestId, saved: true)
+```
+
+### OpenTime.Settings.SetEmailReminders
+
+Authored path: `OpenTime.Settings.SetEmailReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 15.
+
+```reaction
+when RequestBoundary.request (enabled, path: "/settings/email/reminders", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.SetEmailReminders#2
+
+Authored path: `OpenTime.Settings.SetEmailReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 15.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.SetEmailReminders
+where
+  earlier, RequestBoundary.request (enabled, path: "/settings/email/reminders", requestId, session)
+then
+  Contacting.setEmailReminders (enabled, user)
+```
+
+### OpenTime.Settings.SetEmailReminders#3
+
+Authored path: `OpenTime.Settings.SetEmailReminders`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 15.
+
+```reaction
+when Contacting.setEmailReminders (enabled, user), asked by OpenTime.Settings.SetEmailReminders#2
+where
+  earlier, RequestBoundary.request (enabled, path: "/settings/email/reminders", requestId, session)
+then
+  RequestBoundary.respond (requestId, saved: true)
+```
+
+### OpenTime.Settings.VerifyEmail
+
+Authored path: `OpenTime.Settings.VerifyEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 13.
+
+```reaction
+when RequestBoundary.request (code, path: "/settings/email/verify", requestId, session)
+then
+  Authenticating.authenticate (session)
+```
+
+### OpenTime.Settings.VerifyEmail#2
+
+Authored path: `OpenTime.Settings.VerifyEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 13.
+
+```reaction
+when Authenticating.authenticate (session, user), asked by OpenTime.Settings.VerifyEmail
+where
+  earlier, RequestBoundary.request (code, path: "/settings/email/verify", requestId, session)
+then
+  Contacting.verify (code, user)
+```
+
+### OpenTime.Settings.VerifyEmail#3
+
+Authored path: `OpenTime.Settings.VerifyEmail`.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 7.
+- Covered by [Settings composition](../design/compositions/Settings.md), line 13.
+
+```reaction
+when Contacting.verify (code, user, email), asked by OpenTime.Settings.VerifyEmail#2
+where
+  earlier, RequestBoundary.request (code, path: "/settings/email/verify", requestId, session)
+then
+  RequestBoundary.respond (email, requestId)
+```
+
 ## Endpoint input contracts
 
 Before recording an action ask, the boundary rejects a body that is not an
@@ -1717,3 +1995,9 @@ not listed here have no explicit input contract.
 - `/openings/revise` — requires `session`, `opening`, `start`, `end`, `audiences`
 - `/openings/selected-overlap` — requires `session`, `group`, `invitees`, `from`, `to`, `duration`
 - `/openings/withdraw` — requires `session`, `opening`
+- `/settings/email/reminders` — requires `session`, `enabled`
+- `/settings/email/remove` — requires `session`
+- `/settings/email/request` — requires `session`, `email`
+- `/settings/email/verify` — requires `session`, `code`
+- `/settings/get` — requires `session`
+- `/settings/reminders` — requires `session`, `leadMinutes`, `timeZone`

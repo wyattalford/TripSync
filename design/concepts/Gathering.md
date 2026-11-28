@@ -25,6 +25,8 @@ opaque GatheringSummaries
   Details of gatherings visible to one participant.
 opaque CommitmentIntervals
   Confirmed intervals for selected participants, internal to overlap calculation.
+opaque UpcomingGatherings
+  Confirmed gatherings starting soon, with version, details, and attendees; internal to reminders.
 ```
 
 ## State
@@ -178,6 +180,9 @@ _visibleTo(user: User, gathering: Gathering) : one (allowed: Flag)
 
 _listFor(user: User) : one (gatherings: GatheringSummaries)
   Returns current gatherings whose version includes a response from user, ordered by start.
+
+_startingBetween(from: DateTime, to: DateTime) : one (gatherings: UpcomingGatherings)
+  Returns confirmed gatherings whose current version starts after from and no later than to, with attendees. Internal to reminders.
 
 _commitmentsFor(users: Invitees, from: DateTime, to: DateTime, now: DateTime) : one (commitments: CommitmentIntervals)
   Returns clipped confirmed attendance intervals for selected users as one internal record.

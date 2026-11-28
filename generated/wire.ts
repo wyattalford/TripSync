@@ -422,6 +422,67 @@ export type OpenTimeWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "OPENING_FORBIDDEN" | "OPENING_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
+  "/settings/email/reminders": {
+    input: {
+      "enabled": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["setEmailReminders"]>[0], ["enabled"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "saved": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/settings/email/remove": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "removed": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/settings/email/request": {
+    input: {
+      "email": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["requestVerification"]>[0], ["email"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "sent": true;
+    };
+    error: { error: AppWideError | "CODE_COOLDOWN" | "INVALID_EMAIL" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/settings/email/verify": {
+    input: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["verify"]>[0], ["code"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "email": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Contacting"]["verify"]>>, ["email"]>>;
+    };
+    error: { error: AppWideError | "CODE_EXPIRED" | "INVALID_CODE" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/settings/get": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+    };
+    output: {
+      "contact": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Contacting"]["_contact"]>>>, ["contact"]>>;
+      "leadMinutes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Reminding"]["_preferences"]>>>, ["leadMinutes"]>>;
+      "timeZone": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Reminding"]["_preferences"]>>>, ["timeZone"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/settings/reminders": {
+    input: {
+      "leadMinutes": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Reminding"]["setPreferences"]>[0], ["leadMinutes"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["session"]>>;
+      "timeZone": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Reminding"]["setPreferences"]>[0], ["timeZone"]>>;
+    };
+    output: {
+      "saved": true;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REMINDER" | "UNKNOWN_SESSION" };
+  };
 };
 
 export type HttpAppWideError = never;
@@ -790,5 +851,58 @@ export type OpenTimeWireHttp = {
       "withdrawn": true;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/settings/email/reminders": {
+    input: {
+      "enabled": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["setEmailReminders"]>[0], ["enabled"]>>;
+    };
+    output: {
+      "saved": true;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/settings/email/remove": {
+    input: Record<string, never>;
+    output: {
+      "removed": true;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/settings/email/request": {
+    input: {
+      "email": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["requestVerification"]>[0], ["email"]>>;
+    };
+    output: {
+      "sent": true;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/settings/email/verify": {
+    input: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Contacting"]["verify"]>[0], ["code"]>>;
+    };
+    output: {
+      "email": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Contacting"]["verify"]>>, ["email"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/settings/get": {
+    input: Record<string, never>;
+    output: {
+      "contact": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Contacting"]["_contact"]>>>, ["contact"]>>;
+      "leadMinutes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Reminding"]["_preferences"]>>>, ["leadMinutes"]>>;
+      "timeZone": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Reminding"]["_preferences"]>>>, ["timeZone"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/settings/reminders": {
+    input: {
+      "leadMinutes": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Reminding"]["setPreferences"]>[0], ["leadMinutes"]>>;
+      "timeZone": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Reminding"]["setPreferences"]>[0], ["timeZone"]>>;
+    };
+    output: {
+      "saved": true;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
 };
